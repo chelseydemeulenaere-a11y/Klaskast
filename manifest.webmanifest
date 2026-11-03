@@ -1,0 +1,36 @@
+{
+  "name": "De Klaskast",
+  "short_name": "Klaskast",
+  "id": "/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F6F4",
+  "theme_color": "#2E5BD0",
+  "lang": "nl",
+  "description": "Bewaar je prentenboeken en klasmaterialen met foto, thema's, klas en Op.stap-disciplines, en vind ze snel terug per thema.",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,1539 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="description" content="Bewaar je prentenboeken en klasmaterialen met foto, thema's, klas en Op.stap-disciplines.">
+<meta name="theme-color" content="#2E5BD0">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>html,body{margin:0}img{max-width:100%}</style>
+<title>De Klaskast</title>
+</head>
+<body>
+<style>
+/* Layout: one column app. Drop zone + search + theme cloud on top, tabs and klas filter, then a scrolling card grid. Dialog for add/edit, fed by a photo queue. */
+:root {
+  --bg: #F3F6F4;
+  --surface: #FFFFFF;
+  --ink: #1F2B27;
+  --muted: #5C6B66;
+  --line: #D9E1DD;
+  --accent: #2E5BD0;
+  --accent-soft: #E3EAFB;
+  --accent-ink: #FFFFFF;
+  --danger: #C63D2F;
+  --c1: #E8513F; --c2: #F2B632; --c3: #3E9E62; --c4: #2E5BD0; --c5: #8B55C9; --c6: #E07AAE;
+  --k1: #E8513F; --k2: #F2B632; --k3: #3E9E62;
+  --chip-bg: #E7EEEA;
+  --shadow: 0 1px 2px rgba(20,40,30,.06), 0 4px 14px rgba(20,40,30,.06);
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151B19; --surface: #1E2623; --ink: #E8EFEB; --muted: #9AABA4; --line: #2F3B37;
+  --accent: #7C9CF5; --accent-soft: #24304F; --accent-ink: #0F1630; --danger: #F07A6C; --chip-bg: #26302D;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #151B19; --surface: #1E2623; --ink: #E8EFEB; --muted: #9AABA4; --line: #2F3B37;
+  --accent: #7C9CF5; --accent-soft: #24304F; --accent-ink: #0F1630; --danger: #F07A6C; --chip-bg: #26302D;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 60px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark { display: grid; grid-template-columns: repeat(3, 10px); gap: 3px; }
+.brand-mark span { width: 10px; height: 10px; border-radius: 3px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 1.9rem; margin: 0; letter-spacing: .2px; }
+.sub { color: var(--muted); margin: 0; font-size: .95rem; }
+button { font: inherit; cursor: pointer; }
+.btn { border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 700; background: var(--accent); color: var(--accent-ink); }
+.btn:hover { filter: brightness(1.06); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn:disabled { opacity: .6; cursor: default; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.dropzone { border: 2px dashed var(--line); border-radius: 18px; padding: 18px; display: flex; align-items: center; gap: 16px; background: var(--surface); flex-wrap: wrap; }
+.dropzone .icon { width: 48px; height: 48px; border-radius: 12px; background: var(--accent-soft); display: grid; place-items: center; flex: none; }
+.dropzone .txt { flex: 1; min-width: 200px; }
+.dropzone strong { font-family: var(--display); font-weight: 600; font-size: 1.1rem; display: block; }
+.dropzone span { color: var(--muted); font-size: .92rem; }
+.overlay { position: fixed; inset: 0; z-index: 40; background: color-mix(in srgb, var(--accent) 22%, transparent); display: grid; place-items: center; pointer-events: none; padding: 24px; }
+.overlay div { background: var(--surface); border: 3px dashed var(--accent); border-radius: 22px; padding: 32px 40px; font-family: var(--display); font-size: 1.5rem; font-weight: 600; text-align: center; color: var(--ink); }
+
+.search { background: var(--surface); border: 1.5px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
+.search-row { display: flex; gap: 10px; align-items: center; }
+.search input { flex: 1; min-width: 0; font: inherit; font-size: 1.15rem; border: 0; background: var(--chip-bg); color: var(--ink); border-radius: 12px; padding: 12px 14px; }
+.search input::placeholder { color: var(--muted); }
+.label { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+.tchip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid transparent; background: var(--chip-bg); color: var(--ink); border-radius: 999px; padding: 4px 12px 4px 8px; font-size: .9rem; font-weight: 600; }
+.tchip .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.tchip .n { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+button.tchip:hover { border-color: var(--line); }
+button.tchip[aria-pressed="true"] { border-color: var(--ink); }
+
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bar-left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.tabs { display: flex; gap: 4px; background: var(--chip-bg); padding: 4px; border-radius: 12px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); padding: 7px 14px; border-radius: 9px; font-weight: 700; }
+.tabs button[aria-selected="true"], .tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.count { color: var(--muted); font-size: .95rem; }
+
+.kbadge { display: inline-grid; place-items: center; min-width: 28px; height: 22px; padding: 0 6px; border-radius: 6px; font-size: .75rem; font-weight: 700; color: #fff; }
+.kbadge.K1 { background: var(--k1); } .kbadge.K2 { background: var(--k2); color: #3A2A00; } .kbadge.K3 { background: var(--k3); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+.card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; text-align: left; padding: 0; color: inherit; }
+.card:hover { border-color: var(--muted); }
+.cover { aspect-ratio: 4 / 3; max-width: 100%; width: 100%; position: relative; display: grid; place-items: center; overflow: hidden; }
+.cover img { width: 100%; height: 100%; object-fit: cover; }
+.cover .ph { font-family: var(--display); font-weight: 600; color: #fff; font-size: 1.25rem; line-height: 1.2; padding: 16px; text-align: center; text-wrap: balance; text-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.kind { position: absolute; top: 10px; left: 10px; background: var(--surface); color: var(--ink); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 7px; }
+.ex { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,.55); color: #fff; font-size: .7rem; font-weight: 700; padding: 3px 7px; border-radius: 7px; }
+.body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.body h3 { font-family: var(--display); font-weight: 600; font-size: 1.15rem; margin: 0; line-height: 1.25; text-wrap: balance; }
+.body p { margin: 0; color: var(--muted); font-size: .92rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.krow { display: flex; gap: 4px; flex-wrap: wrap; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags .tchip { font-size: .8rem; padding: 2px 9px 2px 6px; }
+.tags .tchip.hit { border-color: var(--ink); }
+
+.empty { text-align: center; padding: 48px 16px; color: var(--muted); border: 2px dashed var(--line); border-radius: 16px; }
+.empty strong { display: block; color: var(--ink); font-family: var(--display); font-size: 1.2rem; margin-bottom: 4px; }
+
+dialog { border: 0; border-radius: 18px; padding: 0; width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 40px); background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(15,25,20,.45); }
+.dlg { display: flex; flex-direction: column; gap: 18px; padding: 22px; }
+.dlg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.dlg h2 { font-family: var(--display); font-weight: 600; margin: 0; font-size: 1.4rem; }
+.queue { color: var(--muted); font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label, .field > .flabel { font-weight: 700; font-size: .95rem; color: var(--ink); }
+.field .hint { color: var(--muted); font-size: .82rem; }
+.field input[type="text"], .field textarea { font: inherit; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; width: 100%; }
+.field input[type="text"]:focus, .field textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.field textarea { min-height: 84px; resize: vertical; }
+.seg { display: flex; gap: 8px; flex-wrap: wrap; }
+.seg label { flex: 1; min-width: 70px; border: 1.5px solid var(--line); border-radius: 10px; padding: 9px; text-align: center; font-weight: 700; cursor: pointer; position: relative; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.seg label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.seg.klas label:has(input:checked) { color: var(--ink); }
+.photo-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.photo-prev { width: 120px; height: 120px; border-radius: 12px; background: var(--chip-bg); display: grid; place-items: center; overflow: hidden; flex: none; color: var(--muted); font-size: .8rem; text-align: center; padding: 6px; border: 2px dashed var(--line); }
+.photo-prev.has { padding: 0; border-style: solid; }
+.photo-prev img { width: 100%; height: 100%; object-fit: cover; }
+.photo-prev.over { border-color: var(--accent); background: var(--accent-soft); }
+.photo-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.photo-pair { display: flex; gap: 18px; flex-wrap: wrap; }
+.photo-slot { display: flex; flex-direction: column; gap: 6px; width: 140px; min-width: 0; }
+.photo-slot .photo-prev { width: 140px; height: 140px; }
+.slot-name { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.btn.small { padding: 6px 10px; font-size: .85rem; border-radius: 9px; cursor: pointer; }
+.pick { display: flex; flex-wrap: wrap; gap: 7px; max-height: 260px; overflow-y: auto; padding: 2px; }
+.pick button { border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 5px 12px 5px 8px; font-size: .88rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.pick button .dot { width: 10px; height: 10px; border-radius: 50%; }
+.pick button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.pick button[aria-pressed="true"]::before { content: "✓"; font-weight: 700; margin-right: -2px; }
+.other { display: flex; gap: 8px; }
+.other input { flex: 1; min-width: 0; }
+.actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+.actions .spacer { flex: 1; }
+.keyhint { color: var(--muted); font-size: .8rem; }
+.keyhint kbd { font-family: inherit; font-weight: 700; background: var(--chip-bg); border-radius: 5px; padding: 1px 6px; }
+.ai { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.ai.ok { color: var(--k3); font-weight: 700; }
+.ai .spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.row2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+#matRow { grid-template-columns: 1fr 2fr; }
+.row2 > .field { min-width: 0; }
+.field input[type="number"] { font: inherit; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; width: 100%; }
+.field input[type="number"]:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.nr { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink); }
+@media (max-width: 420px) { .row2, #matRow { grid-template-columns: 1fr; } }
+.ocr { display: flex; flex-direction: column; gap: 8px; }
+.ocr-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow-y: auto; padding: 2px; }
+.ocr-chips button { border: 1.5px dashed var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 4px 9px; font-size: .85rem; text-align: left; max-width: 100%; overflow-wrap: anywhere; }
+.ocr-chips button:hover { border-color: var(--accent); border-style: solid; }
+.filters { display: flex; gap: 12px; flex-wrap: wrap; margin-top: -8px; }
+.sel { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); font-weight: 700; }
+.sel select { font: inherit; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 6px 10px; max-width: 70vw; }
+.flags { display: flex; gap: 6px; flex-wrap: wrap; }
+.flag { font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--chip-bg); color: var(--ink); }
+.flag.klas { background: color-mix(in srgb, var(--k3) 20%, transparent); }
+.flag.uit { background: color-mix(in srgb, var(--k2) 30%, transparent); }
+.flag.mist { background: color-mix(in srgb, var(--danger) 18%, transparent); }
+.goals { display: flex; flex-direction: column; gap: 6px; }
+.goal { display: flex; gap: 8px; align-items: center; background: var(--bg); border: 1.5px solid var(--line); border-radius: 10px; padding: 6px 8px 6px 12px; font-size: .9rem; }
+.goal span, .goal a { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
+.goal a { color: var(--accent); font-weight: 600; }
+.goal button { border: 0; background: none; color: var(--muted); font-size: 1.1rem; padding: 0 4px; }
+.goal-add { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+.goal-add input { font: inherit; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 9px 12px; min-width: 0; }
+@media (max-width: 560px) { .goal-add { grid-template-columns: 1fr; } }
+#fLoanTo, #fMissing { font: inherit; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; width: 100%; }
+.match { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.match button { display: flex; gap: 8px; align-items: center; text-align: left; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 6px; min-width: 0; }
+.match button:hover { border-color: var(--accent); }
+.match .mthumb { width: 40px; height: 40px; border-radius: 7px; flex: none; overflow: hidden; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: var(--display); }
+.match .mthumb img { width: 100%; height: 100%; object-fit: cover; }
+.match .mtxt { min-width: 0; display: flex; flex-direction: column; }
+.match .mtxt strong { font-size: .85rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match .mtxt small { color: var(--muted); font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-text { margin: 0; color: var(--ink); }
+.bk-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.bk-sep { border: 0; border-top: 1.5px solid var(--line); margin: 4px 0; width: 100%; }
+.bk-paste summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.bk-paste textarea { width: 100%; min-height: 90px; margin: 8px 0; font: inherit; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 8px; }
+.ai-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ai { padding: 8px 12px; background: var(--chip-bg); border-radius: 10px; }
+.auto { font-size: .75rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
+.meta { font-size: .85rem; color: var(--muted); }
+.confirm { background: var(--chip-bg); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600; z-index: 50; max-width: calc(100vw - 32px); }
+.note { font-size: .85rem; color: var(--muted); }
+@media (max-width: 520px) {
+  h1 { font-size: 1.55rem; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .body { padding: 10px 12px 12px; }
+  .body h3 { font-size: 1rem; }
+  .body p { display: none; }
+  .photo-prev { width: 96px; height: 96px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <span style="background:var(--c1)"></span><span style="background:var(--c2)"></span><span style="background:var(--c3)"></span>
+        <span style="background:var(--c4)"></span><span style="background:var(--c5)"></span><span style="background:var(--c6)"></span>
+      </div>
+      <div>
+        <h1>De Klaskast</h1>
+        <p class="sub">Prentenboeken en materialen, per thema</p>
+      </div>
+    </div>
+    <div class="head-actions">
+      <button class="btn ghost" id="backupBtn" type="button">Back-up</button>
+      <button class="btn" id="addBtn" type="button">+ Toevoegen</button>
+    </div>
+  </header>
+
+  <section class="dropzone" id="dropzone" aria-label="Foto's toevoegen">
+    <div class="icon" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>
+    </div>
+    <div class="txt">
+      <strong>Sleep je foto's hierheen</strong>
+      <span>Eén of meerdere tegelijk. Voor elke foto krijg je een invullijst.</span>
+    </div>
+    <label class="btn ghost" for="multiPick" style="cursor:pointer">Foto's kiezen</label>
+    <input type="file" id="multiPick" accept="image/*" multiple hidden>
+  </section>
+
+  <section class="search" aria-label="Zoeken">
+    <div class="search-row">
+      <input id="q" type="search" placeholder="Typ een thema, bv. herfst, dieren, gevoelens…" autocomplete="off" aria-label="Zoek op thema of titel">
+      <button class="btn ghost" id="clearQ" type="button" hidden>Wissen</button>
+    </div>
+    <div class="label">Alle thema's</div>
+    <div class="cloud" id="cloud"></div>
+  </section>
+
+  <div class="bar">
+    <div class="bar-left">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="alles" aria-selected="true" type="button">Alles</button>
+        <button role="tab" data-tab="boek" aria-selected="false" type="button">Prentenboeken</button>
+        <button role="tab" data-tab="materiaal" aria-selected="false" type="button">Materialen</button>
+      </div>
+      <div class="tabs" aria-label="Klas (prentenboeken)">
+        <button type="button" data-k="" aria-pressed="true">Alle klassen</button>
+        <button type="button" data-k="K1" aria-pressed="false">K1</button>
+        <button type="button" data-k="K2" aria-pressed="false">K2</button>
+        <button type="button" data-k="K3" aria-pressed="false">K3</button>
+      </div>
+    </div>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="filters">
+    <label class="sel"><span>Waar</span>
+      <select id="statusFilter">
+        <option value="">Alles</option>
+        <option value="kast">In de kast</option>
+        <option value="klas">In de klas</option>
+        <option value="uit">Uitgeleend</option>
+        <option value="mist">Onvolledig of stuk</option>
+      </select>
+    </label>
+    <label class="sel"><span>Op.stap</span>
+      <select id="opstapFilter"><option value="">Alle disciplines</option></select>
+    </label>
+  </div>
+
+  <main class="grid" id="grid"></main>
+  <p class="note" id="storeNote"></p>
+</div>
+
+<div class="overlay" id="overlay" hidden><div>Laat je foto's hier los</div></div>
+
+<dialog id="dlg">
+  <form class="dlg" id="form" method="dialog">
+    <div class="dlg-head">
+      <h2 id="dlgTitle">Toevoegen</h2>
+      <span class="queue" id="queueInfo"></span>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Wat is het?</span>
+      <div class="seg" id="kindSeg">
+        <label><input type="radio" name="kind" value="boek" id="kindBoek" checked><span>Prentenboek</span></label>
+        <label><input type="radio" name="kind" value="materiaal" id="kindMat"><span>Materiaal</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="fTitle" id="titleLabel">Titel</label>
+      <input type="text" id="fTitle" required maxlength="140" autocomplete="off" enterkeyhint="next">
+    </div>
+
+    <div class="row2" id="bookRow">
+      <div class="field" id="authorField">
+        <label for="fAuthor">Auteur</label>
+        <input type="text" id="fAuthor" maxlength="120" autocomplete="off" enterkeyhint="next" placeholder="bv. Eric Carle">
+      </div>
+      <div class="field" id="numberField">
+        <label for="fNumber">Nummer</label>
+        <input type="text" id="fNumber" maxlength="20" autocomplete="off" inputmode="numeric" enterkeyhint="next">
+      </div>
+    </div>
+
+    <div class="row2" id="matRow">
+      <div class="field">
+        <label for="fCount">Aantal stuks</label>
+        <input type="number" id="fCount" min="0" max="9999" step="1" inputmode="numeric" enterkeyhint="next" placeholder="bv. 4">
+      </div>
+      <div class="field">
+        <label for="fBox">Themabox</label>
+        <input type="text" id="fBox" maxlength="60" list="boxList" autocomplete="off" enterkeyhint="next" placeholder="bv. Herfst">
+        <datalist id="boxList"></datalist>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="flabel" id="photoLabel">Foto</span>
+      <div class="photo-pair">
+        <div class="photo-slot">
+          <span class="slot-name" id="frontName">Voorkant</span>
+          <div class="photo-prev" id="photoPrev">Sleep hier een foto</div>
+          <div class="photo-btns">
+            <label class="btn ghost small" for="fPhoto">Kiezen</label>
+            <input type="file" id="fPhoto" accept="image/*" hidden>
+            <button type="button" class="btn ghost small" id="rmPhoto" hidden>Weg</button>
+          </div>
+        </div>
+        <div class="photo-slot" id="backSlot">
+          <span class="slot-name">Achterkant</span>
+          <div class="photo-prev" id="backPrev">Sleep hier de achterkant</div>
+          <div class="photo-btns">
+            <label class="btn ghost small" for="fBack">Kiezen</label>
+            <input type="file" id="fBack" accept="image/*" hidden>
+            <button type="button" class="btn ghost small" id="rmBack" hidden>Weg</button>
+          </div>
+        </div>
+      </div>
+      <div class="ai-row"><span class="ai" id="aiStatus" hidden></span><button type="button" class="btn ghost small" id="rereadBtn" hidden>Opnieuw lezen</button></div>
+      <div class="ocr" id="ocrPanel" hidden>
+        <span class="hint">Gelezen tekst. Klik eerst in een vak (titel, auteur, omschrijving…) en dan op een stukje tekst om het over te nemen.</span>
+        <div class="ocr-chips" id="ocrChips"></div>
+      </div>
+      <span class="hint" id="backHint">Met een foto van de achterkant wordt de achterflaptekst samengevat in de omschrijving.</span>
+    </div>
+
+    <div class="field" id="descField">
+      <label for="fDesc">Korte omschrijving van het verhaal</label>
+      <textarea id="fDesc" maxlength="800" enterkeyhint="next"></textarea>
+      <span class="hint">Enter gaat naar het volgende vak. Shift + Enter voor een nieuwe regel.</span>
+    </div>
+
+    <div class="field" id="klasField">
+      <span class="flabel">Voor welke klas?</span>
+      <div class="seg klas" id="klasSeg">
+        <label><input type="checkbox" value="K1" id="k1"><span>K1</span></label>
+        <label><input type="checkbox" value="K2" id="k2"><span>K2</span></label>
+        <label><input type="checkbox" value="K3" id="k3"><span>K3</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Bij welke thema's past het?</span>
+      <div class="pick" id="pick" role="group" aria-label="Thema's"></div>
+      <div class="other">
+        <input type="text" id="fOther" placeholder="Ander thema? Typ het hier en druk op Enter" autocomplete="off" enterkeyhint="done">
+        <button type="button" class="btn ghost" id="addOther">Toevoegen</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Op.stap: bij welke disciplines past het?</span>
+      <div class="pick" id="opstapPick" role="group" aria-label="Op.stap-disciplines"></div>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Doelen uit de Op.stap-leerplantool <span class="hint">(optioneel)</span></span>
+      <div class="goals" id="goalList"></div>
+      <div class="goal-add">
+        <input type="text" id="fGoal" maxlength="200" autocomplete="off" enterkeyhint="next" placeholder="Doel of code, zoals in de leerplantool">
+        <input type="text" id="fGoalUrl" maxlength="500" autocomplete="off" inputmode="url" enterkeyhint="done" placeholder="Link naar het doel (plak hier, optioneel)">
+        <button type="button" class="btn ghost small" id="addGoal">Doel toevoegen</button>
+      </div>
+      <span class="hint">Tip: open het doel in de leerplantool, kopieer de link uit de adresbalk en plak die hier. Dan opent het doel later met één klik.</span>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Waar is het nu?</span>
+      <div class="seg" id="statusSeg">
+        <label><input type="radio" name="status" value="kast" id="stKast" checked><span>In de kast</span></label>
+        <label><input type="radio" name="status" value="klas" id="stKlas"><span>In de klas</span></label>
+        <label><input type="radio" name="status" value="uit" id="stUit"><span>Uitgeleend</span></label>
+      </div>
+      <input type="text" id="fLoanTo" maxlength="80" autocomplete="off" enterkeyhint="next" placeholder="Aan wie? bv. juf Sofie, 2de leerjaar" hidden>
+    </div>
+
+    <div class="field">
+      <label for="fMissing">Wat ontbreekt er of is stuk?</label>
+      <input type="text" id="fMissing" maxlength="200" autocomplete="off" enterkeyhint="next" placeholder="bv. 2 puzzelstukjes kwijt, bladzijde 4 gescheurd">
+    </div>
+
+    <div class="field">
+      <label for="fAdapt">Aanpassingen</label>
+      <textarea id="fAdapt" maxlength="1000" placeholder="bv. voor K1 enkel de 4 grote dieren gebruiken; extra pictogrammen gemaakt; vergrote prenten voor een kleuter die slecht ziet"></textarea>
+    </div>
+
+    <div class="field" id="matchField" hidden>
+      <span class="flabel">Past goed bij</span>
+      <span class="hint">Boeken en materialen met dezelfde thema's. Klik om te openen.</span>
+      <div class="match" id="matchList"></div>
+    </div>
+
+    <div class="confirm" id="confirmDel" hidden>
+      <span>Dit item definitief verwijderen?</span>
+      <div class="actions"><button type="button" class="btn ghost" id="noDel">Nee, houden</button><button type="button" class="btn danger" id="yesDel">Ja, verwijderen</button></div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn ghost" id="delBtn" hidden>Verwijderen</button>
+      <span class="keyhint" id="keyhint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> bewaart</span>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" id="cancelBtn">Annuleren</button>
+      <button type="button" class="btn ghost" id="skipBtn" hidden>Overslaan</button>
+      <button type="submit" class="btn" id="saveBtn">Bewaren</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="bdlg">
+  <div class="dlg">
+    <div class="dlg-head"><h2>Back-up</h2></div>
+    <p class="bk-text">Bewaar je hele klaskast in één bestand, met foto's. Maak er geregeld een en bewaar het bestand op een veilige plek, bv. op een USB-stick of in je OneDrive.</p>
+    <div class="bk-row">
+      <button type="button" class="btn" id="bkMake">Back-up maken</button>
+      <button type="button" class="btn ghost" id="bkCopy" hidden>Back-up kopiëren</button>
+    </div>
+    <hr class="bk-sep">
+    <p class="bk-text"><strong>Back-up terugzetten.</strong> Kies een back-upbestand. Boeken en materialen die al bestaan worden bijgewerkt, nieuwe worden toegevoegd. Er wordt niets gewist.</p>
+    <div class="bk-row">
+      <label class="btn ghost" for="bkFile" style="cursor:pointer">Bestand kiezen</label>
+      <input type="file" id="bkFile" accept=".json,application/json,text/plain" hidden>
+    </div>
+    <details class="bk-paste"><summary>Of plak de tekst van een back-up</summary>
+      <textarea id="bkText" placeholder="Plak hier de gekopieerde back-up"></textarea>
+      <button type="button" class="btn ghost small" id="bkPasteGo">Terugzetten</button>
+    </details>
+    <p class="ai" id="bkStatus" hidden></p>
+    <div class="actions"><button type="button" class="btn ghost" id="bkClose">Sluiten</button></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>/*! For license information please see tesseract.min.js.LICENSE.txt */
+!function(t,r){"object"==typeof exports&&"object"==typeof module?module.exports=r():"function"==typeof define&&define.amd?define([],r):"object"==typeof exports?exports.Tesseract=r():t.Tesseract=r()}(self,(()=>(()=>{var t={30:(t,r,e)=>{function n(t){return n="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},n(t)}var o=function(t){"use strict";var r,e=Object.prototype,o=e.hasOwnProperty,i=Object.defineProperty||function(t,r,e){t[r]=e.value},a="function"==typeof Symbol?Symbol:{},c=a.iterator||"@@iterator",u=a.asyncIterator||"@@asyncIterator",f=a.toStringTag||"@@toStringTag";function s(t,r,e){return Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}),t[r]}try{s({},"")}catch(t){s=function(t,r,e){return t[r]=e}}function l(t,r,e,n){var o=r&&r.prototype instanceof m?r:m,a=Object.create(o.prototype),c=new N(n||[]);return i(a,"_invoke",{value:P(t,e,c)}),a}function h(t,r,e){try{return{type:"normal",arg:t.call(r,e)}}catch(t){return{type:"throw",arg:t}}}t.wrap=l;var p="suspendedStart",y="suspendedYield",v="executing",d="completed",g={};function m(){}function b(){}function w(){}var L={};s(L,c,(function(){return this}));var x=Object.getPrototypeOf,E=x&&x(x(A([])));E&&E!==e&&o.call(E,c)&&(L=E);var O=w.prototype=m.prototype=Object.create(L);function S(t){["next","throw","return"].forEach((function(r){s(t,r,(function(t){return this._invoke(r,t)}))}))}function j(t,r){function e(i,a,c,u){var f=h(t[i],t,a);if("throw"!==f.type){var s=f.arg,l=s.value;return l&&"object"===n(l)&&o.call(l,"__await")?r.resolve(l.__await).then((function(t){e("next",t,c,u)}),(function(t){e("throw",t,c,u)})):r.resolve(l).then((function(t){s.value=t,c(s)}),(function(t){return e("throw",t,c,u)}))}u(f.arg)}var a;i(this,"_invoke",{value:function(t,n){function o(){return new r((function(r,o){e(t,n,r,o)}))}return a=a?a.then(o,o):o()}})}function P(t,r,e){var n=p;return function(o,i){if(n===v)throw new Error("Generator is already running");if(n===d){if("throw"===o)throw i;return G()}for(e.method=o,e.arg=i;;){var a=e.delegate;if(a){var c=_(a,e);if(c){if(c===g)continue;return c}}if("next"===e.method)e.sent=e._sent=e.arg;else if("throw"===e.method){if(n===p)throw n=d,e.arg;e.dispatchException(e.arg)}else"return"===e.method&&e.abrupt("return",e.arg);n=v;var u=h(t,r,e);if("normal"===u.type){if(n=e.done?d:y,u.arg===g)continue;return{value:u.arg,done:e.done}}"throw"===u.type&&(n=d,e.method="throw",e.arg=u.arg)}}}function _(t,e){var n=e.method,o=t.iterator[n];if(o===r)return e.delegate=null,"throw"===n&&t.iterator.return&&(e.method="return",e.arg=r,_(t,e),"throw"===e.method)||"return"!==n&&(e.method="throw",e.arg=new TypeError("The iterator does not provide a '"+n+"' method")),g;var i=h(o,t.iterator,e.arg);if("throw"===i.type)return e.method="throw",e.arg=i.arg,e.delegate=null,g;var a=i.arg;return a?a.done?(e[t.resultName]=a.value,e.next=t.nextLoc,"return"!==e.method&&(e.method="next",e.arg=r),e.delegate=null,g):a:(e.method="throw",e.arg=new TypeError("iterator result is not an object"),e.delegate=null,g)}function k(t){var r={tryLoc:t[0]};1 in t&&(r.catchLoc=t[1]),2 in t&&(r.finallyLoc=t[2],r.afterLoc=t[3]),this.tryEntries.push(r)}function T(t){var r=t.completion||{};r.type="normal",delete r.arg,t.completion=r}function N(t){this.tryEntries=[{tryLoc:"root"}],t.forEach(k,this),this.reset(!0)}function A(t){if(t){var e=t[c];if(e)return e.call(t);if("function"==typeof t.next)return t;if(!isNaN(t.length)){var n=-1,i=function e(){for(;++n<t.length;)if(o.call(t,n))return e.value=t[n],e.done=!1,e;return e.value=r,e.done=!0,e};return i.next=i}}return{next:G}}function G(){return{value:r,done:!0}}return b.prototype=w,i(O,"constructor",{value:w,configurable:!0}),i(w,"constructor",{value:b,configurable:!0}),b.displayName=s(w,f,"GeneratorFunction"),t.isGeneratorFunction=function(t){var r="function"==typeof t&&t.constructor;return!!r&&(r===b||"GeneratorFunction"===(r.displayName||r.name))},t.mark=function(t){return Object.setPrototypeOf?Object.setPrototypeOf(t,w):(t.__proto__=w,s(t,f,"GeneratorFunction")),t.prototype=Object.create(O),t},t.awrap=function(t){return{__await:t}},S(j.prototype),s(j.prototype,u,(function(){return this})),t.AsyncIterator=j,t.async=function(r,e,n,o,i){void 0===i&&(i=Promise);var a=new j(l(r,e,n,o),i);return t.isGeneratorFunction(e)?a:a.next().then((function(t){return t.done?t.value:a.next()}))},S(O),s(O,f,"Generator"),s(O,c,(function(){return this})),s(O,"toString",(function(){return"[object Generator]"})),t.keys=function(t){var r=Object(t),e=[];for(var n in r)e.push(n);return e.reverse(),function t(){for(;e.length;){var n=e.pop();if(n in r)return t.value=n,t.done=!1,t}return t.done=!0,t}},t.values=A,N.prototype={constructor:N,reset:function(t){if(this.prev=0,this.next=0,this.sent=this._sent=r,this.done=!1,this.delegate=null,this.method="next",this.arg=r,this.tryEntries.forEach(T),!t)for(var e in this)"t"===e.charAt(0)&&o.call(this,e)&&!isNaN(+e.slice(1))&&(this[e]=r)},stop:function(){this.done=!0;var t=this.tryEntries[0].completion;if("throw"===t.type)throw t.arg;return this.rval},dispatchException:function(t){if(this.done)throw t;var e=this;function n(n,o){return c.type="throw",c.arg=t,e.next=n,o&&(e.method="next",e.arg=r),!!o}for(var i=this.tryEntries.length-1;i>=0;--i){var a=this.tryEntries[i],c=a.completion;if("root"===a.tryLoc)return n("end");if(a.tryLoc<=this.prev){var u=o.call(a,"catchLoc"),f=o.call(a,"finallyLoc");if(u&&f){if(this.prev<a.catchLoc)return n(a.catchLoc,!0);if(this.prev<a.finallyLoc)return n(a.finallyLoc)}else if(u){if(this.prev<a.catchLoc)return n(a.catchLoc,!0)}else{if(!f)throw new Error("try statement without catch or finally");if(this.prev<a.finallyLoc)return n(a.finallyLoc)}}}},abrupt:function(t,r){for(var e=this.tryEntries.length-1;e>=0;--e){var n=this.tryEntries[e];if(n.tryLoc<=this.prev&&o.call(n,"finallyLoc")&&this.prev<n.finallyLoc){var i=n;break}}i&&("break"===t||"continue"===t)&&i.tryLoc<=r&&r<=i.finallyLoc&&(i=null);var a=i?i.completion:{};return a.type=t,a.arg=r,i?(this.method="next",this.next=i.finallyLoc,g):this.complete(a)},complete:function(t,r){if("throw"===t.type)throw t.arg;return"break"===t.type||"continue"===t.type?this.next=t.arg:"return"===t.type?(this.rval=this.arg=t.arg,this.method="return",this.next="end"):"normal"===t.type&&r&&(this.next=r),g},finish:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.finallyLoc===t)return this.complete(e.completion,e.afterLoc),T(e),g}},catch:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.tryLoc===t){var n=e.completion;if("throw"===n.type){var o=n.arg;T(e)}return o}}throw new Error("illegal catch attempt")},delegateYield:function(t,e,n){return this.delegate={iterator:A(t),resultName:e,nextLoc:n},"next"===this.method&&(this.arg=r),g}},t}("object"===n(t=e.nmd(t))?t.exports:{});try{regeneratorRuntime=o}catch(t){"object"===("undefined"==typeof globalThis?"undefined":n(globalThis))?globalThis.regeneratorRuntime=o:Function("r","regeneratorRuntime = r")(o)}},35:(t,r,e)=>{"use strict";function n(t){return n="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},n(t)}function o(t,r){var e=Object.keys(t);if(Object.getOwnPropertySymbols){var n=Object.getOwnPropertySymbols(t);r&&(n=n.filter((function(r){return Object.getOwnPropertyDescriptor(t,r).enumerable}))),e.push.apply(e,n)}return e}function i(t,r,e){return(r=function(t){var r=function(t){if("object"!=n(t)||!t)return t;var r=t[Symbol.toPrimitive];if(void 0!==r){var e=r.call(t,"string");if("object"!=n(e))return e;throw new TypeError("@@toPrimitive must return a primitive value.")}return String(t)}(t);return"symbol"==n(r)?r:r+""}(r))in t?Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}):t[r]=e,t}var a="browser"===e(938)("type")?function(t){return new URL(t,window.location.href).href}:function(t){return t};t.exports=function(t){var r=function(t){for(var r=1;r<arguments.length;r++){var e=null!=arguments[r]?arguments[r]:{};r%2?o(Object(e),!0).forEach((function(r){i(t,r,e[r])})):Object.getOwnPropertyDescriptors?Object.defineProperties(t,Object.getOwnPropertyDescriptors(e)):o(Object(e)).forEach((function(r){Object.defineProperty(t,r,Object.getOwnPropertyDescriptor(e,r))}))}return t}({},t);return["corePath","workerPath","langPath"].forEach((function(e){t[e]&&(r[e]=a(r[e]))})),r}},65:function(t,r){"use strict";var e=this,n=!1;r.logging=n,r.setLogging=function(t){n=t},r.log=function(){for(var t=arguments.length,r=new Array(t),o=0;o<t;o++)r[o]=arguments[o];return n?console.log.apply(e,r):null}},70:t=>{"use strict";t.exports=function(t,r){return"".concat(t,"-").concat(r,"-").concat(Math.random().toString(16).slice(3,8))}},130:t=>{"use strict";function r(t){return r="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},r(t)}function e(){e=function(){return n};var t,n={},o=Object.prototype,i=o.hasOwnProperty,a=Object.defineProperty||function(t,r,e){t[r]=e.value},c="function"==typeof Symbol?Symbol:{},u=c.iterator||"@@iterator",f=c.asyncIterator||"@@asyncIterator",s=c.toStringTag||"@@toStringTag";function l(t,r,e){return Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}),t[r]}try{l({},"")}catch(t){l=function(t,r,e){return t[r]=e}}function h(t,r,e,n){var o=r&&r.prototype instanceof b?r:b,i=Object.create(o.prototype),c=new A(n||[]);return a(i,"_invoke",{value:_(t,e,c)}),i}function p(t,r,e){try{return{type:"normal",arg:t.call(r,e)}}catch(t){return{type:"throw",arg:t}}}n.wrap=h;var y="suspendedStart",v="suspendedYield",d="executing",g="completed",m={};function b(){}function w(){}function L(){}var x={};l(x,u,(function(){return this}));var E=Object.getPrototypeOf,O=E&&E(E(G([])));O&&O!==o&&i.call(O,u)&&(x=O);var S=L.prototype=b.prototype=Object.create(x);function j(t){["next","throw","return"].forEach((function(r){l(t,r,(function(t){return this._invoke(r,t)}))}))}function P(t,e){function n(o,a,c,u){var f=p(t[o],t,a);if("throw"!==f.type){var s=f.arg,l=s.value;return l&&"object"==r(l)&&i.call(l,"__await")?e.resolve(l.__await).then((function(t){n("next",t,c,u)}),(function(t){n("throw",t,c,u)})):e.resolve(l).then((function(t){s.value=t,c(s)}),(function(t){return n("throw",t,c,u)}))}u(f.arg)}var o;a(this,"_invoke",{value:function(t,r){function i(){return new e((function(e,o){n(t,r,e,o)}))}return o=o?o.then(i,i):i()}})}function _(r,e,n){var o=y;return function(i,a){if(o===d)throw Error("Generator is already running");if(o===g){if("throw"===i)throw a;return{value:t,done:!0}}for(n.method=i,n.arg=a;;){var c=n.delegate;if(c){var u=k(c,n);if(u){if(u===m)continue;return u}}if("next"===n.method)n.sent=n._sent=n.arg;else if("throw"===n.method){if(o===y)throw o=g,n.arg;n.dispatchException(n.arg)}else"return"===n.method&&n.abrupt("return",n.arg);o=d;var f=p(r,e,n);if("normal"===f.type){if(o=n.done?g:v,f.arg===m)continue;return{value:f.arg,done:n.done}}"throw"===f.type&&(o=g,n.method="throw",n.arg=f.arg)}}}function k(r,e){var n=e.method,o=r.iterator[n];if(o===t)return e.delegate=null,"throw"===n&&r.iterator.return&&(e.method="return",e.arg=t,k(r,e),"throw"===e.method)||"return"!==n&&(e.method="throw",e.arg=new TypeError("The iterator does not provide a '"+n+"' method")),m;var i=p(o,r.iterator,e.arg);if("throw"===i.type)return e.method="throw",e.arg=i.arg,e.delegate=null,m;var a=i.arg;return a?a.done?(e[r.resultName]=a.value,e.next=r.nextLoc,"return"!==e.method&&(e.method="next",e.arg=t),e.delegate=null,m):a:(e.method="throw",e.arg=new TypeError("iterator result is not an object"),e.delegate=null,m)}function T(t){var r={tryLoc:t[0]};1 in t&&(r.catchLoc=t[1]),2 in t&&(r.finallyLoc=t[2],r.afterLoc=t[3]),this.tryEntries.push(r)}function N(t){var r=t.completion||{};r.type="normal",delete r.arg,t.completion=r}function A(t){this.tryEntries=[{tryLoc:"root"}],t.forEach(T,this),this.reset(!0)}function G(e){if(e||""===e){var n=e[u];if(n)return n.call(e);if("function"==typeof e.next)return e;if(!isNaN(e.length)){var o=-1,a=function r(){for(;++o<e.length;)if(i.call(e,o))return r.value=e[o],r.done=!1,r;return r.value=t,r.done=!0,r};return a.next=a}}throw new TypeError(r(e)+" is not iterable")}return w.prototype=L,a(S,"constructor",{value:L,configurable:!0}),a(L,"constructor",{value:w,configurable:!0}),w.displayName=l(L,s,"GeneratorFunction"),n.isGeneratorFunction=function(t){var r="function"==typeof t&&t.constructor;return!!r&&(r===w||"GeneratorFunction"===(r.displayName||r.name))},n.mark=function(t){return Object.setPrototypeOf?Object.setPrototypeOf(t,L):(t.__proto__=L,l(t,s,"GeneratorFunction")),t.prototype=Object.create(S),t},n.awrap=function(t){return{__await:t}},j(P.prototype),l(P.prototype,f,(function(){return this})),n.AsyncIterator=P,n.async=function(t,r,e,o,i){void 0===i&&(i=Promise);var a=new P(h(t,r,e,o),i);return n.isGeneratorFunction(r)?a:a.next().then((function(t){return t.done?t.value:a.next()}))},j(S),l(S,s,"Generator"),l(S,u,(function(){return this})),l(S,"toString",(function(){return"[object Generator]"})),n.keys=function(t){var r=Object(t),e=[];for(var n in r)e.push(n);return e.reverse(),function t(){for(;e.length;){var n=e.pop();if(n in r)return t.value=n,t.done=!1,t}return t.done=!0,t}},n.values=G,A.prototype={constructor:A,reset:function(r){if(this.prev=0,this.next=0,this.sent=this._sent=t,this.done=!1,this.delegate=null,this.method="next",this.arg=t,this.tryEntries.forEach(N),!r)for(var e in this)"t"===e.charAt(0)&&i.call(this,e)&&!isNaN(+e.slice(1))&&(this[e]=t)},stop:function(){this.done=!0;var t=this.tryEntries[0].completion;if("throw"===t.type)throw t.arg;return this.rval},dispatchException:function(r){if(this.done)throw r;var e=this;function n(n,o){return c.type="throw",c.arg=r,e.next=n,o&&(e.method="next",e.arg=t),!!o}for(var o=this.tryEntries.length-1;o>=0;--o){var a=this.tryEntries[o],c=a.completion;if("root"===a.tryLoc)return n("end");if(a.tryLoc<=this.prev){var u=i.call(a,"catchLoc"),f=i.call(a,"finallyLoc");if(u&&f){if(this.prev<a.catchLoc)return n(a.catchLoc,!0);if(this.prev<a.finallyLoc)return n(a.finallyLoc)}else if(u){if(this.prev<a.catchLoc)return n(a.catchLoc,!0)}else{if(!f)throw Error("try statement without catch or finally");if(this.prev<a.finallyLoc)return n(a.finallyLoc)}}}},abrupt:function(t,r){for(var e=this.tryEntries.length-1;e>=0;--e){var n=this.tryEntries[e];if(n.tryLoc<=this.prev&&i.call(n,"finallyLoc")&&this.prev<n.finallyLoc){var o=n;break}}o&&("break"===t||"continue"===t)&&o.tryLoc<=r&&r<=o.finallyLoc&&(o=null);var a=o?o.completion:{};return a.type=t,a.arg=r,o?(this.method="next",this.next=o.finallyLoc,m):this.complete(a)},complete:function(t,r){if("throw"===t.type)throw t.arg;return"break"===t.type||"continue"===t.type?this.next=t.arg:"return"===t.type?(this.rval=this.arg=t.arg,this.method="return",this.next="end"):"normal"===t.type&&r&&(this.next=r),m},finish:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.finallyLoc===t)return this.complete(e.completion,e.afterLoc),N(e),m}},catch:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.tryLoc===t){var n=e.completion;if("throw"===n.type){var o=n.arg;N(e)}return o}}throw Error("illegal catch attempt")},delegateYield:function(r,e,n){return this.delegate={iterator:G(r),resultName:e,nextLoc:n},"next"===this.method&&(this.arg=t),m}},n}function n(t,r,e,n,o,i,a){try{var c=t[i](a),u=c.value}catch(t){return void e(t)}c.done?r(u):Promise.resolve(u).then(n,o)}function o(t){return function(){var r=this,e=arguments;return new Promise((function(o,i){var a=t.apply(r,e);function c(t){n(a,o,i,c,u,"next",t)}function u(t){n(a,o,i,c,u,"throw",t)}c(void 0)}))}}var i=function(t){return new Promise((function(r,e){var n=new FileReader;n.onload=function(){r(n.result)},n.onerror=function(t){var r=t.target.error.code;e(Error("File could not be read! Code=".concat(r)))},n.readAsArrayBuffer(t)}))},a=function(){var t=o(e().mark((function t(r){var n,c,u;return e().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:if(n=r,void 0!==r){t.next=3;break}return t.abrupt("return","undefined");case 3:if("string"!=typeof r){t.next=16;break}if(!/data:image\/([a-zA-Z]*);base64,([^"]*)/.test(r)){t.next=8;break}n=atob(r.split(",")[1]).split("").map((function(t){return t.charCodeAt(0)})),t.next=14;break;case 8:return t.next=10,fetch(r);case 10:return c=t.sent,t.next=13,c.arrayBuffer();case 13:n=t.sent;case 14:t.next=43;break;case 16:if(!("undefined"!=typeof HTMLElement&&r instanceof HTMLElement)){t.next=30;break}if("IMG"!==r.tagName){t.next=21;break}return t.next=20,a(r.src);case 20:n=t.sent;case 21:if("VIDEO"!==r.tagName){t.next=25;break}return t.next=24,a(r.poster);case 24:n=t.sent;case 25:if("CANVAS"!==r.tagName){t.next=28;break}return t.next=28,new Promise((function(t){r.toBlob(function(){var r=o(e().mark((function r(o){return e().wrap((function(r){for(;;)switch(r.prev=r.next){case 0:return r.next=2,i(o);case 2:n=r.sent,t();case 4:case"end":return r.stop()}}),r)})));return function(t){return r.apply(this,arguments)}}())}));case 28:t.next=43;break;case 30:if(!("undefined"!=typeof OffscreenCanvas&&r instanceof OffscreenCanvas)){t.next=39;break}return t.next=33,r.convertToBlob();case 33:return u=t.sent,t.next=36,i(u);case 36:n=t.sent,t.next=43;break;case 39:if(!(r instanceof File||r instanceof Blob)){t.next=43;break}return t.next=42,i(r);case 42:n=t.sent;case 43:return t.abrupt("return",new Uint8Array(n));case 44:case"end":return t.stop()}}),t)})));return function(r){return t.apply(this,arguments)}}();t.exports=a},192:t=>{"use strict";t.exports={AFR:"afr",AMH:"amh",ARA:"ara",ASM:"asm",AZE:"aze",AZE_CYRL:"aze_cyrl",BEL:"bel",BEN:"ben",BOD:"bod",BOS:"bos",BUL:"bul",CAT:"cat",CEB:"ceb",CES:"ces",CHI_SIM:"chi_sim",CHI_TRA:"chi_tra",CHR:"chr",CYM:"cym",DAN:"dan",DEU:"deu",DZO:"dzo",ELL:"ell",ENG:"eng",ENM:"enm",EPO:"epo",EST:"est",EUS:"eus",FAS:"fas",FIN:"fin",FRA:"fra",FRK:"frk",FRM:"frm",GLE:"gle",GLG:"glg",GRC:"grc",GUJ:"guj",HAT:"hat",HEB:"heb",HIN:"hin",HRV:"hrv",HUN:"hun",IKU:"iku",IND:"ind",ISL:"isl",ITA:"ita",ITA_OLD:"ita_old",JAV:"jav",JPN:"jpn",KAN:"kan",KAT:"kat",KAT_OLD:"kat_old",KAZ:"kaz",KHM:"khm",KIR:"kir",KOR:"kor",KUR:"kur",LAO:"lao",LAT:"lat",LAV:"lav",LIT:"lit",MAL:"mal",MAR:"mar",MKD:"mkd",MLT:"mlt",MSA:"msa",MYA:"mya",NEP:"nep",NLD:"nld",NOR:"nor",ORI:"ori",PAN:"pan",POL:"pol",POR:"por",PUS:"pus",RON:"ron",RUS:"rus",SAN:"san",SIN:"sin",SLK:"slk",SLV:"slv",SPA:"spa",SPA_OLD:"spa_old",SQI:"sqi",SRP:"srp",SRP_LATN:"srp_latn",SWA:"swa",SWE:"swe",SYR:"syr",TAM:"tam",TEL:"tel",TGK:"tgk",TGL:"tgl",THA:"tha",TIR:"tir",TUR:"tur",UIG:"uig",UKR:"ukr",URD:"urd",UZB:"uzb",UZB_CYRL:"uzb_cyrl",VIE:"vie",YID:"yid"}},286:t=>{"use strict";t.exports={workerBlobURL:!0,logger:function(){}}},318:t=>{"use strict";t.exports=function(t){var r,e=t.workerPath,n=t.workerBlobURL;if(Blob&&URL&&n){var o=new Blob(['importScripts("'.concat(e,'");')],{type:"application/javascript"});r=new Worker(URL.createObjectURL(o))}else r=new Worker(e);return r}},330:t=>{"use strict";t.exports={rE:"6.0.1"}},364:function(t,r,e){"use strict";function n(t){return n="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},n(t)}var o=this;function i(){i=function(){return r};var t,r={},e=Object.prototype,o=e.hasOwnProperty,a=Object.defineProperty||function(t,r,e){t[r]=e.value},c="function"==typeof Symbol?Symbol:{},u=c.iterator||"@@iterator",f=c.asyncIterator||"@@asyncIterator",s=c.toStringTag||"@@toStringTag";function l(t,r,e){return Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}),t[r]}try{l({},"")}catch(t){l=function(t,r,e){return t[r]=e}}function h(t,r,e,n){var o=r&&r.prototype instanceof b?r:b,i=Object.create(o.prototype),c=new A(n||[]);return a(i,"_invoke",{value:_(t,e,c)}),i}function p(t,r,e){try{return{type:"normal",arg:t.call(r,e)}}catch(t){return{type:"throw",arg:t}}}r.wrap=h;var y="suspendedStart",v="suspendedYield",d="executing",g="completed",m={};function b(){}function w(){}function L(){}var x={};l(x,u,(function(){return this}));var E=Object.getPrototypeOf,O=E&&E(E(G([])));O&&O!==e&&o.call(O,u)&&(x=O);var S=L.prototype=b.prototype=Object.create(x);function j(t){["next","throw","return"].forEach((function(r){l(t,r,(function(t){return this._invoke(r,t)}))}))}function P(t,r){function e(i,a,c,u){var f=p(t[i],t,a);if("throw"!==f.type){var s=f.arg,l=s.value;return l&&"object"==n(l)&&o.call(l,"__await")?r.resolve(l.__await).then((function(t){e("next",t,c,u)}),(function(t){e("throw",t,c,u)})):r.resolve(l).then((function(t){s.value=t,c(s)}),(function(t){return e("throw",t,c,u)}))}u(f.arg)}var i;a(this,"_invoke",{value:function(t,n){function o(){return new r((function(r,o){e(t,n,r,o)}))}return i=i?i.then(o,o):o()}})}function _(r,e,n){var o=y;return function(i,a){if(o===d)throw Error("Generator is already running");if(o===g){if("throw"===i)throw a;return{value:t,done:!0}}for(n.method=i,n.arg=a;;){var c=n.delegate;if(c){var u=k(c,n);if(u){if(u===m)continue;return u}}if("next"===n.method)n.sent=n._sent=n.arg;else if("throw"===n.method){if(o===y)throw o=g,n.arg;n.dispatchException(n.arg)}else"return"===n.method&&n.abrupt("return",n.arg);o=d;var f=p(r,e,n);if("normal"===f.type){if(o=n.done?g:v,f.arg===m)continue;return{value:f.arg,done:n.done}}"throw"===f.type&&(o=g,n.method="throw",n.arg=f.arg)}}}function k(r,e){var n=e.method,o=r.iterator[n];if(o===t)return e.delegate=null,"throw"===n&&r.iterator.return&&(e.method="return",e.arg=t,k(r,e),"throw"===e.method)||"return"!==n&&(e.method="throw",e.arg=new TypeError("The iterator does not provide a '"+n+"' method")),m;var i=p(o,r.iterator,e.arg);if("throw"===i.type)return e.method="throw",e.arg=i.arg,e.delegate=null,m;var a=i.arg;return a?a.done?(e[r.resultName]=a.value,e.next=r.nextLoc,"return"!==e.method&&(e.method="next",e.arg=t),e.delegate=null,m):a:(e.method="throw",e.arg=new TypeError("iterator result is not an object"),e.delegate=null,m)}function T(t){var r={tryLoc:t[0]};1 in t&&(r.catchLoc=t[1]),2 in t&&(r.finallyLoc=t[2],r.afterLoc=t[3]),this.tryEntries.push(r)}function N(t){var r=t.completion||{};r.type="normal",delete r.arg,t.completion=r}function A(t){this.tryEntries=[{tryLoc:"root"}],t.forEach(T,this),this.reset(!0)}function G(r){if(r||""===r){var e=r[u];if(e)return e.call(r);if("function"==typeof r.next)return r;if(!isNaN(r.length)){var i=-1,a=function e(){for(;++i<r.length;)if(o.call(r,i))return e.value=r[i],e.done=!1,e;return e.value=t,e.done=!0,e};return a.next=a}}throw new TypeError(n(r)+" is not iterable")}return w.prototype=L,a(S,"constructor",{value:L,configurable:!0}),a(L,"constructor",{value:w,configurable:!0}),w.displayName=l(L,s,"GeneratorFunction"),r.isGeneratorFunction=function(t){var r="function"==typeof t&&t.constructor;return!!r&&(r===w||"GeneratorFunction"===(r.displayName||r.name))},r.mark=function(t){return Object.setPrototypeOf?Object.setPrototypeOf(t,L):(t.__proto__=L,l(t,s,"GeneratorFunction")),t.prototype=Object.create(S),t},r.awrap=function(t){return{__await:t}},j(P.prototype),l(P.prototype,f,(function(){return this})),r.AsyncIterator=P,r.async=function(t,e,n,o,i){void 0===i&&(i=Promise);var a=new P(h(t,e,n,o),i);return r.isGeneratorFunction(e)?a:a.next().then((function(t){return t.done?t.value:a.next()}))},j(S),l(S,s,"Generator"),l(S,u,(function(){return this})),l(S,"toString",(function(){return"[object Generator]"})),r.keys=function(t){var r=Object(t),e=[];for(var n in r)e.push(n);return e.reverse(),function t(){for(;e.length;){var n=e.pop();if(n in r)return t.value=n,t.done=!1,t}return t.done=!0,t}},r.values=G,A.prototype={constructor:A,reset:function(r){if(this.prev=0,this.next=0,this.sent=this._sent=t,this.done=!1,this.delegate=null,this.method="next",this.arg=t,this.tryEntries.forEach(N),!r)for(var e in this)"t"===e.charAt(0)&&o.call(this,e)&&!isNaN(+e.slice(1))&&(this[e]=t)},stop:function(){this.done=!0;var t=this.tryEntries[0].completion;if("throw"===t.type)throw t.arg;return this.rval},dispatchException:function(r){if(this.done)throw r;var e=this;function n(n,o){return c.type="throw",c.arg=r,e.next=n,o&&(e.method="next",e.arg=t),!!o}for(var i=this.tryEntries.length-1;i>=0;--i){var a=this.tryEntries[i],c=a.completion;if("root"===a.tryLoc)return n("end");if(a.tryLoc<=this.prev){var u=o.call(a,"catchLoc"),f=o.call(a,"finallyLoc");if(u&&f){if(this.prev<a.catchLoc)return n(a.catchLoc,!0);if(this.prev<a.finallyLoc)return n(a.finallyLoc)}else if(u){if(this.prev<a.catchLoc)return n(a.catchLoc,!0)}else{if(!f)throw Error("try statement without catch or finally");if(this.prev<a.finallyLoc)return n(a.finallyLoc)}}}},abrupt:function(t,r){for(var e=this.tryEntries.length-1;e>=0;--e){var n=this.tryEntries[e];if(n.tryLoc<=this.prev&&o.call(n,"finallyLoc")&&this.prev<n.finallyLoc){var i=n;break}}i&&("break"===t||"continue"===t)&&i.tryLoc<=r&&r<=i.finallyLoc&&(i=null);var a=i?i.completion:{};return a.type=t,a.arg=r,i?(this.method="next",this.next=i.finallyLoc,m):this.complete(a)},complete:function(t,r){if("throw"===t.type)throw t.arg;return"break"===t.type||"continue"===t.type?this.next=t.arg:"return"===t.type?(this.rval=this.arg=t.arg,this.method="return",this.next="end"):"normal"===t.type&&r&&(this.next=r),m},finish:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.finallyLoc===t)return this.complete(e.completion,e.afterLoc),N(e),m}},catch:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.tryLoc===t){var n=e.completion;if("throw"===n.type){var o=n.arg;N(e)}return o}}throw Error("illegal catch attempt")},delegateYield:function(r,e,n){return this.delegate={iterator:G(r),resultName:e,nextLoc:n},"next"===this.method&&(this.arg=t),m}},r}function a(t,r){(null==r||r>t.length)&&(r=t.length);for(var e=0,n=Array(r);e<r;e++)n[e]=t[e];return n}function c(t,r,e,n,o,i,a){try{var c=t[i](a),u=c.value}catch(t){return void e(t)}c.done?r(u):Promise.resolve(u).then(n,o)}function u(t){return function(){var r=this,e=arguments;return new Promise((function(n,o){var i=t.apply(r,e);function a(t){c(i,n,o,a,u,"next",t)}function u(t){c(i,n,o,a,u,"throw",t)}a(void 0)}))}}var f=e(910),s=e(65).log,l=e(70),h=0;t.exports=function(){var t=l("Scheduler",h),r={},e={},n=[];h+=1;var c=function(){return Object.keys(r).length},p=function(){if(0!==n.length)for(var t=Object.keys(r),o=0;o<t.length;o+=1)if(void 0===e[t[o]]){n[0](r[t[o]]);break}},y=function(r,c){return new Promise((function(l,h){var y=f({action:r,payload:c});n.push(function(){var t=u(i().mark((function t(u){return i().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return n.shift(),e[u.id]=y,t.prev=2,t.t0=l,t.next=6,u[r].apply(o,[].concat(function(t){if(Array.isArray(t))return a(t)}(i=c)||function(t){if("undefined"!=typeof Symbol&&null!=t[Symbol.iterator]||null!=t["@@iterator"])return Array.from(t)}(i)||function(t,r){if(t){if("string"==typeof t)return a(t,r);var e={}.toString.call(t).slice(8,-1);return"Object"===e&&t.constructor&&(e=t.constructor.name),"Map"===e||"Set"===e?Array.from(t):"Arguments"===e||/^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(e)?a(t,r):void 0}}(i)||function(){throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")}(),[y.id]));case 6:t.t1=t.sent,(0,t.t0)(t.t1),t.next=13;break;case 10:t.prev=10,t.t2=t.catch(2),h(t.t2);case 13:return t.prev=13,delete e[u.id],p(),t.finish(13);case 17:case"end":return t.stop()}var i}),t,null,[[2,10,13,17]])})));return function(r){return t.apply(this,arguments)}}()),s("[".concat(t,"]: Add ").concat(y.id," to JobQueue")),s("[".concat(t,"]: JobQueue length=").concat(n.length)),p()}))},v=function(){var r=u(i().mark((function r(e){var n,o,a,u=arguments;return i().wrap((function(r){for(;;)switch(r.prev=r.next){case 0:if(0!==c()){r.next=2;break}throw Error("[".concat(t,"]: You need to have at least one worker before adding jobs"));case 2:for(n=u.length,o=new Array(n>1?n-1:0),a=1;a<n;a++)o[a-1]=u[a];return r.abrupt("return",y(e,o));case 4:case"end":return r.stop()}}),r)})));return function(t){return r.apply(this,arguments)}}(),d=function(){var t=u(i().mark((function t(){return i().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:Object.keys(r).forEach(function(){var t=u(i().mark((function t(e){return i().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,r[e].terminate();case 2:case"end":return t.stop()}}),t)})));return function(r){return t.apply(this,arguments)}}()),n=[];case 2:case"end":return t.stop()}}),t)})));return function(){return t.apply(this,arguments)}}();return{addWorker:function(e){return r[e.id]=e,s("[".concat(t,"]: Add ").concat(e.id)),s("[".concat(t,"]: Number of workers=").concat(c())),p(),e.id},addJob:v,terminate:d,getQueueLen:function(){return n.length},getNumWorkers:c}}},523:(t,r,e)=>{"use strict";var n=e(830),o=e(318),i=e(862),a=e(727),c=e(753),u=e(130);t.exports={defaultOptions:n,spawnWorker:o,terminateWorker:i,onMessage:a,send:c,loadImage:u}},535:(t,r,e)=>{"use strict";function n(t){return n="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},n(t)}function o(){o=function(){return r};var t,r={},e=Object.prototype,i=e.hasOwnProperty,a=Object.defineProperty||function(t,r,e){t[r]=e.value},c="function"==typeof Symbol?Symbol:{},u=c.iterator||"@@iterator",f=c.asyncIterator||"@@asyncIterator",s=c.toStringTag||"@@toStringTag";function l(t,r,e){return Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}),t[r]}try{l({},"")}catch(t){l=function(t,r,e){return t[r]=e}}function h(t,r,e,n){var o=r&&r.prototype instanceof b?r:b,i=Object.create(o.prototype),c=new A(n||[]);return a(i,"_invoke",{value:_(t,e,c)}),i}function p(t,r,e){try{return{type:"normal",arg:t.call(r,e)}}catch(t){return{type:"throw",arg:t}}}r.wrap=h;var y="suspendedStart",v="suspendedYield",d="executing",g="completed",m={};function b(){}function w(){}function L(){}var x={};l(x,u,(function(){return this}));var E=Object.getPrototypeOf,O=E&&E(E(G([])));O&&O!==e&&i.call(O,u)&&(x=O);var S=L.prototype=b.prototype=Object.create(x);function j(t){["next","throw","return"].forEach((function(r){l(t,r,(function(t){return this._invoke(r,t)}))}))}function P(t,r){function e(o,a,c,u){var f=p(t[o],t,a);if("throw"!==f.type){var s=f.arg,l=s.value;return l&&"object"==n(l)&&i.call(l,"__await")?r.resolve(l.__await).then((function(t){e("next",t,c,u)}),(function(t){e("throw",t,c,u)})):r.resolve(l).then((function(t){s.value=t,c(s)}),(function(t){return e("throw",t,c,u)}))}u(f.arg)}var o;a(this,"_invoke",{value:function(t,n){function i(){return new r((function(r,o){e(t,n,r,o)}))}return o=o?o.then(i,i):i()}})}function _(r,e,n){var o=y;return function(i,a){if(o===d)throw Error("Generator is already running");if(o===g){if("throw"===i)throw a;return{value:t,done:!0}}for(n.method=i,n.arg=a;;){var c=n.delegate;if(c){var u=k(c,n);if(u){if(u===m)continue;return u}}if("next"===n.method)n.sent=n._sent=n.arg;else if("throw"===n.method){if(o===y)throw o=g,n.arg;n.dispatchException(n.arg)}else"return"===n.method&&n.abrupt("return",n.arg);o=d;var f=p(r,e,n);if("normal"===f.type){if(o=n.done?g:v,f.arg===m)continue;return{value:f.arg,done:n.done}}"throw"===f.type&&(o=g,n.method="throw",n.arg=f.arg)}}}function k(r,e){var n=e.method,o=r.iterator[n];if(o===t)return e.delegate=null,"throw"===n&&r.iterator.return&&(e.method="return",e.arg=t,k(r,e),"throw"===e.method)||"return"!==n&&(e.method="throw",e.arg=new TypeError("The iterator does not provide a '"+n+"' method")),m;var i=p(o,r.iterator,e.arg);if("throw"===i.type)return e.method="throw",e.arg=i.arg,e.delegate=null,m;var a=i.arg;return a?a.done?(e[r.resultName]=a.value,e.next=r.nextLoc,"return"!==e.method&&(e.method="next",e.arg=t),e.delegate=null,m):a:(e.method="throw",e.arg=new TypeError("iterator result is not an object"),e.delegate=null,m)}function T(t){var r={tryLoc:t[0]};1 in t&&(r.catchLoc=t[1]),2 in t&&(r.finallyLoc=t[2],r.afterLoc=t[3]),this.tryEntries.push(r)}function N(t){var r=t.completion||{};r.type="normal",delete r.arg,t.completion=r}function A(t){this.tryEntries=[{tryLoc:"root"}],t.forEach(T,this),this.reset(!0)}function G(r){if(r||""===r){var e=r[u];if(e)return e.call(r);if("function"==typeof r.next)return r;if(!isNaN(r.length)){var o=-1,a=function e(){for(;++o<r.length;)if(i.call(r,o))return e.value=r[o],e.done=!1,e;return e.value=t,e.done=!0,e};return a.next=a}}throw new TypeError(n(r)+" is not iterable")}return w.prototype=L,a(S,"constructor",{value:L,configurable:!0}),a(L,"constructor",{value:w,configurable:!0}),w.displayName=l(L,s,"GeneratorFunction"),r.isGeneratorFunction=function(t){var r="function"==typeof t&&t.constructor;return!!r&&(r===w||"GeneratorFunction"===(r.displayName||r.name))},r.mark=function(t){return Object.setPrototypeOf?Object.setPrototypeOf(t,L):(t.__proto__=L,l(t,s,"GeneratorFunction")),t.prototype=Object.create(S),t},r.awrap=function(t){return{__await:t}},j(P.prototype),l(P.prototype,f,(function(){return this})),r.AsyncIterator=P,r.async=function(t,e,n,o,i){void 0===i&&(i=Promise);var a=new P(h(t,e,n,o),i);return r.isGeneratorFunction(e)?a:a.next().then((function(t){return t.done?t.value:a.next()}))},j(S),l(S,s,"Generator"),l(S,u,(function(){return this})),l(S,"toString",(function(){return"[object Generator]"})),r.keys=function(t){var r=Object(t),e=[];for(var n in r)e.push(n);return e.reverse(),function t(){for(;e.length;){var n=e.pop();if(n in r)return t.value=n,t.done=!1,t}return t.done=!0,t}},r.values=G,A.prototype={constructor:A,reset:function(r){if(this.prev=0,this.next=0,this.sent=this._sent=t,this.done=!1,this.delegate=null,this.method="next",this.arg=t,this.tryEntries.forEach(N),!r)for(var e in this)"t"===e.charAt(0)&&i.call(this,e)&&!isNaN(+e.slice(1))&&(this[e]=t)},stop:function(){this.done=!0;var t=this.tryEntries[0].completion;if("throw"===t.type)throw t.arg;return this.rval},dispatchException:function(r){if(this.done)throw r;var e=this;function n(n,o){return c.type="throw",c.arg=r,e.next=n,o&&(e.method="next",e.arg=t),!!o}for(var o=this.tryEntries.length-1;o>=0;--o){var a=this.tryEntries[o],c=a.completion;if("root"===a.tryLoc)return n("end");if(a.tryLoc<=this.prev){var u=i.call(a,"catchLoc"),f=i.call(a,"finallyLoc");if(u&&f){if(this.prev<a.catchLoc)return n(a.catchLoc,!0);if(this.prev<a.finallyLoc)return n(a.finallyLoc)}else if(u){if(this.prev<a.catchLoc)return n(a.catchLoc,!0)}else{if(!f)throw Error("try statement without catch or finally");if(this.prev<a.finallyLoc)return n(a.finallyLoc)}}}},abrupt:function(t,r){for(var e=this.tryEntries.length-1;e>=0;--e){var n=this.tryEntries[e];if(n.tryLoc<=this.prev&&i.call(n,"finallyLoc")&&this.prev<n.finallyLoc){var o=n;break}}o&&("break"===t||"continue"===t)&&o.tryLoc<=r&&r<=o.finallyLoc&&(o=null);var a=o?o.completion:{};return a.type=t,a.arg=r,o?(this.method="next",this.next=o.finallyLoc,m):this.complete(a)},complete:function(t,r){if("throw"===t.type)throw t.arg;return"break"===t.type||"continue"===t.type?this.next=t.arg:"return"===t.type?(this.rval=this.arg=t.arg,this.method="return",this.next="end"):"normal"===t.type&&r&&(this.next=r),m},finish:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.finallyLoc===t)return this.complete(e.completion,e.afterLoc),N(e),m}},catch:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.tryLoc===t){var n=e.completion;if("throw"===n.type){var o=n.arg;N(e)}return o}}throw Error("illegal catch attempt")},delegateYield:function(r,e,n){return this.delegate={iterator:G(r),resultName:e,nextLoc:n},"next"===this.method&&(this.arg=t),m}},r}function i(t,r,e,n,o,i,a){try{var c=t[i](a),u=c.value}catch(t){return void e(t)}c.done?r(u):Promise.resolve(u).then(n,o)}function a(t){return function(){var r=this,e=arguments;return new Promise((function(n,o){var a=t.apply(r,e);function c(t){i(a,n,o,c,u,"next",t)}function u(t){i(a,n,o,c,u,"throw",t)}c(void 0)}))}}var c=e(603),u=function(){var t=a(o().mark((function t(r,e,n){var i;return o().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,c(e,1,n);case 2:return i=t.sent,t.abrupt("return",i.recognize(r).finally(a(o().mark((function t(){return o().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,i.terminate();case 2:case"end":return t.stop()}}),t)})))));case 4:case"end":return t.stop()}}),t)})));return function(r,e,n){return t.apply(this,arguments)}}(),f=function(){var t=a(o().mark((function t(r,e){var n;return o().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,c("osd",0,e);case 2:return n=t.sent,t.abrupt("return",n.detect(r).finally(a(o().mark((function t(){return o().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,n.terminate();case 2:case"end":return t.stop()}}),t)})))));case 4:case"end":return t.stop()}}),t)})));return function(r,e){return t.apply(this,arguments)}}();t.exports={recognize:u,detect:f}},603:(t,r,e)=>{"use strict";function n(t){return n="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},n(t)}var o=["logger","errorHandler"];function i(){i=function(){return r};var t,r={},e=Object.prototype,o=e.hasOwnProperty,a=Object.defineProperty||function(t,r,e){t[r]=e.value},c="function"==typeof Symbol?Symbol:{},u=c.iterator||"@@iterator",f=c.asyncIterator||"@@asyncIterator",s=c.toStringTag||"@@toStringTag";function l(t,r,e){return Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}),t[r]}try{l({},"")}catch(t){l=function(t,r,e){return t[r]=e}}function h(t,r,e,n){var o=r&&r.prototype instanceof b?r:b,i=Object.create(o.prototype),c=new A(n||[]);return a(i,"_invoke",{value:_(t,e,c)}),i}function p(t,r,e){try{return{type:"normal",arg:t.call(r,e)}}catch(t){return{type:"throw",arg:t}}}r.wrap=h;var y="suspendedStart",v="suspendedYield",d="executing",g="completed",m={};function b(){}function w(){}function L(){}var x={};l(x,u,(function(){return this}));var E=Object.getPrototypeOf,O=E&&E(E(G([])));O&&O!==e&&o.call(O,u)&&(x=O);var S=L.prototype=b.prototype=Object.create(x);function j(t){["next","throw","return"].forEach((function(r){l(t,r,(function(t){return this._invoke(r,t)}))}))}function P(t,r){function e(i,a,c,u){var f=p(t[i],t,a);if("throw"!==f.type){var s=f.arg,l=s.value;return l&&"object"==n(l)&&o.call(l,"__await")?r.resolve(l.__await).then((function(t){e("next",t,c,u)}),(function(t){e("throw",t,c,u)})):r.resolve(l).then((function(t){s.value=t,c(s)}),(function(t){return e("throw",t,c,u)}))}u(f.arg)}var i;a(this,"_invoke",{value:function(t,n){function o(){return new r((function(r,o){e(t,n,r,o)}))}return i=i?i.then(o,o):o()}})}function _(r,e,n){var o=y;return function(i,a){if(o===d)throw Error("Generator is already running");if(o===g){if("throw"===i)throw a;return{value:t,done:!0}}for(n.method=i,n.arg=a;;){var c=n.delegate;if(c){var u=k(c,n);if(u){if(u===m)continue;return u}}if("next"===n.method)n.sent=n._sent=n.arg;else if("throw"===n.method){if(o===y)throw o=g,n.arg;n.dispatchException(n.arg)}else"return"===n.method&&n.abrupt("return",n.arg);o=d;var f=p(r,e,n);if("normal"===f.type){if(o=n.done?g:v,f.arg===m)continue;return{value:f.arg,done:n.done}}"throw"===f.type&&(o=g,n.method="throw",n.arg=f.arg)}}}function k(r,e){var n=e.method,o=r.iterator[n];if(o===t)return e.delegate=null,"throw"===n&&r.iterator.return&&(e.method="return",e.arg=t,k(r,e),"throw"===e.method)||"return"!==n&&(e.method="throw",e.arg=new TypeError("The iterator does not provide a '"+n+"' method")),m;var i=p(o,r.iterator,e.arg);if("throw"===i.type)return e.method="throw",e.arg=i.arg,e.delegate=null,m;var a=i.arg;return a?a.done?(e[r.resultName]=a.value,e.next=r.nextLoc,"return"!==e.method&&(e.method="next",e.arg=t),e.delegate=null,m):a:(e.method="throw",e.arg=new TypeError("iterator result is not an object"),e.delegate=null,m)}function T(t){var r={tryLoc:t[0]};1 in t&&(r.catchLoc=t[1]),2 in t&&(r.finallyLoc=t[2],r.afterLoc=t[3]),this.tryEntries.push(r)}function N(t){var r=t.completion||{};r.type="normal",delete r.arg,t.completion=r}function A(t){this.tryEntries=[{tryLoc:"root"}],t.forEach(T,this),this.reset(!0)}function G(r){if(r||""===r){var e=r[u];if(e)return e.call(r);if("function"==typeof r.next)return r;if(!isNaN(r.length)){var i=-1,a=function e(){for(;++i<r.length;)if(o.call(r,i))return e.value=r[i],e.done=!1,e;return e.value=t,e.done=!0,e};return a.next=a}}throw new TypeError(n(r)+" is not iterable")}return w.prototype=L,a(S,"constructor",{value:L,configurable:!0}),a(L,"constructor",{value:w,configurable:!0}),w.displayName=l(L,s,"GeneratorFunction"),r.isGeneratorFunction=function(t){var r="function"==typeof t&&t.constructor;return!!r&&(r===w||"GeneratorFunction"===(r.displayName||r.name))},r.mark=function(t){return Object.setPrototypeOf?Object.setPrototypeOf(t,L):(t.__proto__=L,l(t,s,"GeneratorFunction")),t.prototype=Object.create(S),t},r.awrap=function(t){return{__await:t}},j(P.prototype),l(P.prototype,f,(function(){return this})),r.AsyncIterator=P,r.async=function(t,e,n,o,i){void 0===i&&(i=Promise);var a=new P(h(t,e,n,o),i);return r.isGeneratorFunction(e)?a:a.next().then((function(t){return t.done?t.value:a.next()}))},j(S),l(S,s,"Generator"),l(S,u,(function(){return this})),l(S,"toString",(function(){return"[object Generator]"})),r.keys=function(t){var r=Object(t),e=[];for(var n in r)e.push(n);return e.reverse(),function t(){for(;e.length;){var n=e.pop();if(n in r)return t.value=n,t.done=!1,t}return t.done=!0,t}},r.values=G,A.prototype={constructor:A,reset:function(r){if(this.prev=0,this.next=0,this.sent=this._sent=t,this.done=!1,this.delegate=null,this.method="next",this.arg=t,this.tryEntries.forEach(N),!r)for(var e in this)"t"===e.charAt(0)&&o.call(this,e)&&!isNaN(+e.slice(1))&&(this[e]=t)},stop:function(){this.done=!0;var t=this.tryEntries[0].completion;if("throw"===t.type)throw t.arg;return this.rval},dispatchException:function(r){if(this.done)throw r;var e=this;function n(n,o){return c.type="throw",c.arg=r,e.next=n,o&&(e.method="next",e.arg=t),!!o}for(var i=this.tryEntries.length-1;i>=0;--i){var a=this.tryEntries[i],c=a.completion;if("root"===a.tryLoc)return n("end");if(a.tryLoc<=this.prev){var u=o.call(a,"catchLoc"),f=o.call(a,"finallyLoc");if(u&&f){if(this.prev<a.catchLoc)return n(a.catchLoc,!0);if(this.prev<a.finallyLoc)return n(a.finallyLoc)}else if(u){if(this.prev<a.catchLoc)return n(a.catchLoc,!0)}else{if(!f)throw Error("try statement without catch or finally");if(this.prev<a.finallyLoc)return n(a.finallyLoc)}}}},abrupt:function(t,r){for(var e=this.tryEntries.length-1;e>=0;--e){var n=this.tryEntries[e];if(n.tryLoc<=this.prev&&o.call(n,"finallyLoc")&&this.prev<n.finallyLoc){var i=n;break}}i&&("break"===t||"continue"===t)&&i.tryLoc<=r&&r<=i.finallyLoc&&(i=null);var a=i?i.completion:{};return a.type=t,a.arg=r,i?(this.method="next",this.next=i.finallyLoc,m):this.complete(a)},complete:function(t,r){if("throw"===t.type)throw t.arg;return"break"===t.type||"continue"===t.type?this.next=t.arg:"return"===t.type?(this.rval=this.arg=t.arg,this.method="return",this.next="end"):"normal"===t.type&&r&&(this.next=r),m},finish:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.finallyLoc===t)return this.complete(e.completion,e.afterLoc),N(e),m}},catch:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.tryLoc===t){var n=e.completion;if("throw"===n.type){var o=n.arg;N(e)}return o}}throw Error("illegal catch attempt")},delegateYield:function(r,e,n){return this.delegate={iterator:G(r),resultName:e,nextLoc:n},"next"===this.method&&(this.arg=t),m}},r}function a(t,r){(null==r||r>t.length)&&(r=t.length);for(var e=0,n=Array(r);e<r;e++)n[e]=t[e];return n}function c(t,r){var e=Object.keys(t);if(Object.getOwnPropertySymbols){var n=Object.getOwnPropertySymbols(t);r&&(n=n.filter((function(r){return Object.getOwnPropertyDescriptor(t,r).enumerable}))),e.push.apply(e,n)}return e}function u(t){for(var r=1;r<arguments.length;r++){var e=null!=arguments[r]?arguments[r]:{};r%2?c(Object(e),!0).forEach((function(r){f(t,r,e[r])})):Object.getOwnPropertyDescriptors?Object.defineProperties(t,Object.getOwnPropertyDescriptors(e)):c(Object(e)).forEach((function(r){Object.defineProperty(t,r,Object.getOwnPropertyDescriptor(e,r))}))}return t}function f(t,r,e){return(r=function(t){var r=function(t){if("object"!=n(t)||!t)return t;var r=t[Symbol.toPrimitive];if(void 0!==r){var e=r.call(t,"string");if("object"!=n(e))return e;throw new TypeError("@@toPrimitive must return a primitive value.")}return String(t)}(t);return"symbol"==n(r)?r:r+""}(r))in t?Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}):t[r]=e,t}function s(t,r){if(null==t)return{};var e,n,o=function(t,r){if(null==t)return{};var e={};for(var n in t)if({}.hasOwnProperty.call(t,n)){if(-1!==r.indexOf(n))continue;e[n]=t[n]}return e}(t,r);if(Object.getOwnPropertySymbols){var i=Object.getOwnPropertySymbols(t);for(n=0;n<i.length;n++)e=i[n],-1===r.indexOf(e)&&{}.propertyIsEnumerable.call(t,e)&&(o[e]=t[e])}return o}function l(t,r,e,n,o,i,a){try{var c=t[i](a),u=c.value}catch(t){return void e(t)}c.done?r(u):Promise.resolve(u).then(n,o)}function h(t){return function(){var r=this,e=arguments;return new Promise((function(n,o){var i=t.apply(r,e);function a(t){l(i,n,o,a,c,"next",t)}function c(t){l(i,n,o,a,c,"throw",t)}a(void 0)}))}}var p=e(35),y=e(910),v=e(65).log,d=e(70),g=e(972),m=e(523),b=m.defaultOptions,w=m.spawnWorker,L=m.terminateWorker,x=m.onMessage,E=m.loadImage,O=m.send,S=0;t.exports=h(i().mark((function t(){var r,e,n,c,f,l,m,j,P,_,k,T,N,A,G,I,F,R,D,M,C,U,Y,B,H,K,W,z,J,V,Z,Q,q,X,$=arguments;return i().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return r=$.length>0&&void 0!==$[0]?$[0]:"eng",e=$.length>1&&void 0!==$[1]?$[1]:g.LSTM_ONLY,n=$.length>2&&void 0!==$[2]?$[2]:{},c=$.length>3&&void 0!==$[3]?$[3]:{},f=d("Worker",S),l=p(u(u({},b),n)),m=l.logger,j=l.errorHandler,P=s(l,o),_={},k="string"==typeof r?r.split("+"):r,T=e,N=c,A=[g.DEFAULT,g.LSTM_ONLY].includes(e)&&!P.legacyCore,F=new Promise((function(t,r){I=t,G=r})),R=function(t){G(t.message)},(D=w(P)).onerror=R,S+=1,M=function(t){var r=t.id,e=t.action,n=t.payload;return new Promise((function(t,o){v("[".concat(f,"]: Start ").concat(r,", action=").concat(e));var i="".concat(e,"-").concat(r);_[i]={resolve:t,reject:o},O(D,{workerId:f,jobId:r,action:e,payload:n})}))},C=function(){return console.warn("`load` is depreciated and should be removed from code (workers now come pre-loaded)")},U=function(t){return M(y({id:t,action:"load",payload:{options:{lstmOnly:A,corePath:P.corePath,logging:P.logging}}}))},Y=function(t,r,e){return M(y({id:e,action:"FS",payload:{method:"writeFile",args:[t,r]}}))},B=function(t,r){return M(y({id:r,action:"FS",payload:{method:"readFile",args:[t,{encoding:"utf8"}]}}))},H=function(t,r){return M(y({id:r,action:"FS",payload:{method:"unlink",args:[t]}}))},K=function(t,r,e){return M(y({id:e,action:"FS",payload:{method:t,args:r}}))},W=function(t,r){return M(y({id:r,action:"loadLanguage",payload:{langs:t,options:{langPath:P.langPath,dataPath:P.dataPath,cachePath:P.cachePath,cacheMethod:P.cacheMethod,gzip:P.gzip,lstmOnly:[g.DEFAULT,g.LSTM_ONLY].includes(T)&&!P.legacyLang}}}))},z=function(t,r,e,n){return M(y({id:n,action:"initialize",payload:{langs:t,oem:r,config:e}}))},J=function(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:"eng",r=arguments.length>1?arguments[1]:void 0,e=arguments.length>2?arguments[2]:void 0,n=arguments.length>3?arguments[3]:void 0;if(A&&[g.TESSERACT_ONLY,g.TESSERACT_LSTM_COMBINED].includes(r))throw Error("Legacy model requested but code missing.");var o=r||T;T=o;var i=e||N;N=i;var c,u=("string"==typeof t?t.split("+"):t).filter((function(t){return!k.includes(t)}));return k.push.apply(k,function(t){if(Array.isArray(t))return a(t)}(c=u)||function(t){if("undefined"!=typeof Symbol&&null!=t[Symbol.iterator]||null!=t["@@iterator"])return Array.from(t)}(c)||function(t,r){if(t){if("string"==typeof t)return a(t,r);var e={}.toString.call(t).slice(8,-1);return"Object"===e&&t.constructor&&(e=t.constructor.name),"Map"===e||"Set"===e?Array.from(t):"Arguments"===e||/^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(e)?a(t,r):void 0}}(c)||function(){throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")}()),u.length>0?W(u,n).then((function(){return z(t,o,i,n)})):z(t,o,i,n)},V=function(){return M(y({id:arguments.length>1?arguments[1]:void 0,action:"setParameters",payload:{params:arguments.length>0&&void 0!==arguments[0]?arguments[0]:{}}}))},Z=function(){var t=h(i().mark((function t(r){var e,n,o,a=arguments;return i().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return e=a.length>1&&void 0!==a[1]?a[1]:{},n=a.length>2&&void 0!==a[2]?a[2]:{text:!0},o=a.length>3?a[3]:void 0,t.t0=M,t.t1=y,t.t2=o,t.next=8,E(r);case 8:return t.t3=t.sent,t.t4=e,t.t5=n,t.t6={image:t.t3,options:t.t4,output:t.t5},t.t7={id:t.t2,action:"recognize",payload:t.t6},t.t8=(0,t.t1)(t.t7),t.abrupt("return",(0,t.t0)(t.t8));case 15:case"end":return t.stop()}}),t)})));return function(r){return t.apply(this,arguments)}}(),Q=function(){var t=h(i().mark((function t(r,e){return i().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:if(!A){t.next=2;break}throw Error("`worker.detect` requires Legacy model, which was not loaded.");case 2:return t.t0=M,t.t1=y,t.t2=e,t.next=7,E(r);case 7:return t.t3=t.sent,t.t4={image:t.t3},t.t5={id:t.t2,action:"detect",payload:t.t4},t.t6=(0,t.t1)(t.t5),t.abrupt("return",(0,t.t0)(t.t6));case 12:case"end":return t.stop()}}),t)})));return function(r,e){return t.apply(this,arguments)}}(),q=function(){var t=h(i().mark((function t(){return i().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:return null!==D&&(L(D),D=null),t.abrupt("return",Promise.resolve());case 2:case"end":return t.stop()}}),t)})));return function(){return t.apply(this,arguments)}}(),x(D,(function(t){var r=t.workerId,e=t.jobId,n=t.status,o=t.action,i=t.data,a="".concat(o,"-").concat(e);if("resolve"===n)v("[".concat(r,"]: Complete ").concat(e)),_[a].resolve({jobId:e,data:i}),delete _[a];else if("reject"===n){if(_[a].reject(i),delete _[a],"load"===o&&G(i),!j)throw Error(i);j(i)}else"progress"===n&&m(u(u({},i),{},{userJobId:e}))})),X={id:f,worker:D,load:C,writeText:Y,readText:B,removeFile:H,FS:K,reinitialize:J,setParameters:V,recognize:Z,detect:Q,terminate:q},U().then((function(){return W(r)})).then((function(){return z(r,e,c)})).then((function(){return I(X)})).catch((function(){})),t.abrupt("return",F);case 34:case"end":return t.stop()}}),t)})))},727:t=>{"use strict";t.exports=function(t,r){t.onmessage=function(t){var e=t.data;r(e)}}},753:t=>{"use strict";function r(t){return r="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},r(t)}function e(){e=function(){return n};var t,n={},o=Object.prototype,i=o.hasOwnProperty,a=Object.defineProperty||function(t,r,e){t[r]=e.value},c="function"==typeof Symbol?Symbol:{},u=c.iterator||"@@iterator",f=c.asyncIterator||"@@asyncIterator",s=c.toStringTag||"@@toStringTag";function l(t,r,e){return Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}),t[r]}try{l({},"")}catch(t){l=function(t,r,e){return t[r]=e}}function h(t,r,e,n){var o=r&&r.prototype instanceof b?r:b,i=Object.create(o.prototype),c=new A(n||[]);return a(i,"_invoke",{value:_(t,e,c)}),i}function p(t,r,e){try{return{type:"normal",arg:t.call(r,e)}}catch(t){return{type:"throw",arg:t}}}n.wrap=h;var y="suspendedStart",v="suspendedYield",d="executing",g="completed",m={};function b(){}function w(){}function L(){}var x={};l(x,u,(function(){return this}));var E=Object.getPrototypeOf,O=E&&E(E(G([])));O&&O!==o&&i.call(O,u)&&(x=O);var S=L.prototype=b.prototype=Object.create(x);function j(t){["next","throw","return"].forEach((function(r){l(t,r,(function(t){return this._invoke(r,t)}))}))}function P(t,e){function n(o,a,c,u){var f=p(t[o],t,a);if("throw"!==f.type){var s=f.arg,l=s.value;return l&&"object"==r(l)&&i.call(l,"__await")?e.resolve(l.__await).then((function(t){n("next",t,c,u)}),(function(t){n("throw",t,c,u)})):e.resolve(l).then((function(t){s.value=t,c(s)}),(function(t){return n("throw",t,c,u)}))}u(f.arg)}var o;a(this,"_invoke",{value:function(t,r){function i(){return new e((function(e,o){n(t,r,e,o)}))}return o=o?o.then(i,i):i()}})}function _(r,e,n){var o=y;return function(i,a){if(o===d)throw Error("Generator is already running");if(o===g){if("throw"===i)throw a;return{value:t,done:!0}}for(n.method=i,n.arg=a;;){var c=n.delegate;if(c){var u=k(c,n);if(u){if(u===m)continue;return u}}if("next"===n.method)n.sent=n._sent=n.arg;else if("throw"===n.method){if(o===y)throw o=g,n.arg;n.dispatchException(n.arg)}else"return"===n.method&&n.abrupt("return",n.arg);o=d;var f=p(r,e,n);if("normal"===f.type){if(o=n.done?g:v,f.arg===m)continue;return{value:f.arg,done:n.done}}"throw"===f.type&&(o=g,n.method="throw",n.arg=f.arg)}}}function k(r,e){var n=e.method,o=r.iterator[n];if(o===t)return e.delegate=null,"throw"===n&&r.iterator.return&&(e.method="return",e.arg=t,k(r,e),"throw"===e.method)||"return"!==n&&(e.method="throw",e.arg=new TypeError("The iterator does not provide a '"+n+"' method")),m;var i=p(o,r.iterator,e.arg);if("throw"===i.type)return e.method="throw",e.arg=i.arg,e.delegate=null,m;var a=i.arg;return a?a.done?(e[r.resultName]=a.value,e.next=r.nextLoc,"return"!==e.method&&(e.method="next",e.arg=t),e.delegate=null,m):a:(e.method="throw",e.arg=new TypeError("iterator result is not an object"),e.delegate=null,m)}function T(t){var r={tryLoc:t[0]};1 in t&&(r.catchLoc=t[1]),2 in t&&(r.finallyLoc=t[2],r.afterLoc=t[3]),this.tryEntries.push(r)}function N(t){var r=t.completion||{};r.type="normal",delete r.arg,t.completion=r}function A(t){this.tryEntries=[{tryLoc:"root"}],t.forEach(T,this),this.reset(!0)}function G(e){if(e||""===e){var n=e[u];if(n)return n.call(e);if("function"==typeof e.next)return e;if(!isNaN(e.length)){var o=-1,a=function r(){for(;++o<e.length;)if(i.call(e,o))return r.value=e[o],r.done=!1,r;return r.value=t,r.done=!0,r};return a.next=a}}throw new TypeError(r(e)+" is not iterable")}return w.prototype=L,a(S,"constructor",{value:L,configurable:!0}),a(L,"constructor",{value:w,configurable:!0}),w.displayName=l(L,s,"GeneratorFunction"),n.isGeneratorFunction=function(t){var r="function"==typeof t&&t.constructor;return!!r&&(r===w||"GeneratorFunction"===(r.displayName||r.name))},n.mark=function(t){return Object.setPrototypeOf?Object.setPrototypeOf(t,L):(t.__proto__=L,l(t,s,"GeneratorFunction")),t.prototype=Object.create(S),t},n.awrap=function(t){return{__await:t}},j(P.prototype),l(P.prototype,f,(function(){return this})),n.AsyncIterator=P,n.async=function(t,r,e,o,i){void 0===i&&(i=Promise);var a=new P(h(t,r,e,o),i);return n.isGeneratorFunction(r)?a:a.next().then((function(t){return t.done?t.value:a.next()}))},j(S),l(S,s,"Generator"),l(S,u,(function(){return this})),l(S,"toString",(function(){return"[object Generator]"})),n.keys=function(t){var r=Object(t),e=[];for(var n in r)e.push(n);return e.reverse(),function t(){for(;e.length;){var n=e.pop();if(n in r)return t.value=n,t.done=!1,t}return t.done=!0,t}},n.values=G,A.prototype={constructor:A,reset:function(r){if(this.prev=0,this.next=0,this.sent=this._sent=t,this.done=!1,this.delegate=null,this.method="next",this.arg=t,this.tryEntries.forEach(N),!r)for(var e in this)"t"===e.charAt(0)&&i.call(this,e)&&!isNaN(+e.slice(1))&&(this[e]=t)},stop:function(){this.done=!0;var t=this.tryEntries[0].completion;if("throw"===t.type)throw t.arg;return this.rval},dispatchException:function(r){if(this.done)throw r;var e=this;function n(n,o){return c.type="throw",c.arg=r,e.next=n,o&&(e.method="next",e.arg=t),!!o}for(var o=this.tryEntries.length-1;o>=0;--o){var a=this.tryEntries[o],c=a.completion;if("root"===a.tryLoc)return n("end");if(a.tryLoc<=this.prev){var u=i.call(a,"catchLoc"),f=i.call(a,"finallyLoc");if(u&&f){if(this.prev<a.catchLoc)return n(a.catchLoc,!0);if(this.prev<a.finallyLoc)return n(a.finallyLoc)}else if(u){if(this.prev<a.catchLoc)return n(a.catchLoc,!0)}else{if(!f)throw Error("try statement without catch or finally");if(this.prev<a.finallyLoc)return n(a.finallyLoc)}}}},abrupt:function(t,r){for(var e=this.tryEntries.length-1;e>=0;--e){var n=this.tryEntries[e];if(n.tryLoc<=this.prev&&i.call(n,"finallyLoc")&&this.prev<n.finallyLoc){var o=n;break}}o&&("break"===t||"continue"===t)&&o.tryLoc<=r&&r<=o.finallyLoc&&(o=null);var a=o?o.completion:{};return a.type=t,a.arg=r,o?(this.method="next",this.next=o.finallyLoc,m):this.complete(a)},complete:function(t,r){if("throw"===t.type)throw t.arg;return"break"===t.type||"continue"===t.type?this.next=t.arg:"return"===t.type?(this.rval=this.arg=t.arg,this.method="return",this.next="end"):"normal"===t.type&&r&&(this.next=r),m},finish:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.finallyLoc===t)return this.complete(e.completion,e.afterLoc),N(e),m}},catch:function(t){for(var r=this.tryEntries.length-1;r>=0;--r){var e=this.tryEntries[r];if(e.tryLoc===t){var n=e.completion;if("throw"===n.type){var o=n.arg;N(e)}return o}}throw Error("illegal catch attempt")},delegateYield:function(r,e,n){return this.delegate={iterator:G(r),resultName:e,nextLoc:n},"next"===this.method&&(this.arg=t),m}},n}function n(t,r,e,n,o,i,a){try{var c=t[i](a),u=c.value}catch(t){return void e(t)}c.done?r(u):Promise.resolve(u).then(n,o)}t.exports=function(){var t,r=(t=e().mark((function t(r,n){return e().wrap((function(t){for(;;)switch(t.prev=t.next){case 0:r.postMessage(n);case 1:case"end":return t.stop()}}),t)})),function(){var r=this,e=arguments;return new Promise((function(o,i){var a=t.apply(r,e);function c(t){n(a,o,i,c,u,"next",t)}function u(t){n(a,o,i,c,u,"throw",t)}c(void 0)}))});return function(t,e){return r.apply(this,arguments)}}()},830:(t,r,e)=>{"use strict";function n(t){return n="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},n(t)}function o(t,r){var e=Object.keys(t);if(Object.getOwnPropertySymbols){var n=Object.getOwnPropertySymbols(t);r&&(n=n.filter((function(r){return Object.getOwnPropertyDescriptor(t,r).enumerable}))),e.push.apply(e,n)}return e}function i(t){for(var r=1;r<arguments.length;r++){var e=null!=arguments[r]?arguments[r]:{};r%2?o(Object(e),!0).forEach((function(r){a(t,r,e[r])})):Object.getOwnPropertyDescriptors?Object.defineProperties(t,Object.getOwnPropertyDescriptors(e)):o(Object(e)).forEach((function(r){Object.defineProperty(t,r,Object.getOwnPropertyDescriptor(e,r))}))}return t}function a(t,r,e){return(r=function(t){var r=function(t){if("object"!=n(t)||!t)return t;var r=t[Symbol.toPrimitive];if(void 0!==r){var e=r.call(t,"string");if("object"!=n(e))return e;throw new TypeError("@@toPrimitive must return a primitive value.")}return String(t)}(t);return"symbol"==n(r)?r:r+""}(r))in t?Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}):t[r]=e,t}var c=e(330).rE,u=e(286);t.exports=i(i({},u),{},{workerPath:"https://cdn.jsdelivr.net/npm/tesseract.js@v".concat(c,"/dist/worker.min.js")})},862:t=>{"use strict";t.exports=function(t){t.terminate()}},877:(t,r,e)=>{"use strict";function n(t){return n="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},n(t)}function o(t,r){var e=Object.keys(t);if(Object.getOwnPropertySymbols){var n=Object.getOwnPropertySymbols(t);r&&(n=n.filter((function(r){return Object.getOwnPropertyDescriptor(t,r).enumerable}))),e.push.apply(e,n)}return e}function i(t,r,e){return(r=function(t){var r=function(t){if("object"!=n(t)||!t)return t;var r=t[Symbol.toPrimitive];if(void 0!==r){var e=r.call(t,"string");if("object"!=n(e))return e;throw new TypeError("@@toPrimitive must return a primitive value.")}return String(t)}(t);return"symbol"==n(r)?r:r+""}(r))in t?Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}):t[r]=e,t}e(30);var a=e(364),c=e(603),u=e(535),f=e(192),s=e(972),l=e(971),h=e(65).setLogging;t.exports=function(t){for(var r=1;r<arguments.length;r++){var e=null!=arguments[r]?arguments[r]:{};r%2?o(Object(e),!0).forEach((function(r){i(t,r,e[r])})):Object.getOwnPropertyDescriptors?Object.defineProperties(t,Object.getOwnPropertyDescriptors(e)):o(Object(e)).forEach((function(r){Object.defineProperty(t,r,Object.getOwnPropertyDescriptor(e,r))}))}return t}({languages:f,OEM:s,PSM:l,createScheduler:a,createWorker:c,setLogging:h},u)},910:(t,r,e)=>{"use strict";var n=e(70),o=0;t.exports=function(t){var r=t.id,e=t.action,i=t.payload,a=void 0===i?{}:i,c=r;return void 0===c&&(c=n("Job",o),o+=1),{id:c,action:e,payload:a}}},938:t=>{"use strict";function r(t){return r="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},r(t)}t.exports=function(t){var e={};return"undefined"!=typeof WorkerGlobalScope?e.type="webworker":"object"===("undefined"==typeof document?"undefined":r(document))?e.type="browser":"object"===("undefined"==typeof process?"undefined":r(process))&&(e.type="node"),void 0===t?e:e[t]}},971:t=>{"use strict";t.exports={OSD_ONLY:"0",AUTO_OSD:"1",AUTO_ONLY:"2",AUTO:"3",SINGLE_COLUMN:"4",SINGLE_BLOCK_VERT_TEXT:"5",SINGLE_BLOCK:"6",SINGLE_LINE:"7",SINGLE_WORD:"8",CIRCLE_WORD:"9",SINGLE_CHAR:"10",SPARSE_TEXT:"11",SPARSE_TEXT_OSD:"12",RAW_LINE:"13"}},972:t=>{"use strict";t.exports={TESSERACT_ONLY:0,LSTM_ONLY:1,TESSERACT_LSTM_COMBINED:2,DEFAULT:3}}},r={};function e(n){var o=r[n];if(void 0!==o)return o.exports;var i=r[n]={id:n,loaded:!1,exports:{}};return t[n].call(i.exports,i,i.exports,e),i.loaded=!0,i.exports}return e.nmd=t=>(t.paths=[],t.children||(t.children=[]),t),e(877)})()));
+//# sourceMappingURL=tesseract.min.js.map</script>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const COLORS = ["--c1","--c2","--c3","--c4","--c5","--c6"];
+  const LS_KEY = "klaskast-items-v1";
+  const LOCAL_NOTE = "Je klaskast wordt bewaard op deze computer. Maak geregeld een back-up via de knop Back-up.";
+  const OCR_FAIL_EXTRA = "";
+  const KLASSEN = ["K1","K2","K3"];
+  const PRESET_THEMES = [
+    "schoolstart","herfst","winter","lente","zomer",
+    "sinterklaas","kerstmis","carnaval","pasen","moederdag","vaderdag","verjaardag",
+    "dieren","boerderij","bos","zee","insecten","dinosaurussen",
+    "gevoelens","vriendschap","familie","mijn lichaam","ziek zijn","slapen",
+    "kleuren","vormen","tellen","eten","water","weer",
+    "verkeer","beroepen","bouwen","ruimte","muziek",
+    "kabouters","ridders en kastelen","prinsen en prinsessen","heksen","piraten"
+  ];
+  const EXAMPLES = [
+    {kind:"boek",title:"Rupsje Nooitgenoeg",description:"Een rupsje eet zich een week lang door allerlei eten heen en wordt een prachtige vlinder.",klassen:["K1","K2"],themes:["lente","insecten","eten","tellen"],example:true},
+    {kind:"boek",title:"Kikker is verliefd",description:"Kikker voelt zich vreemd: hij is verliefd op Eend.",klassen:["K2","K3"],themes:["gevoelens","vriendschap"],example:true},
+    {kind:"materiaal",title:"Herfstbladeren stempelset",themes:["herfst","kleuren"],example:true},
+    {kind:"materiaal",title:"Boerderijdieren puzzel",themes:["boerderij","dieren"],example:true}
+  ];
+
+  let items = [];
+  let colPath = "items";
+  let mode = "local";
+  let db = null, assets = null;
+  let state = { q: "", tab: "alles", klas: "", status: "", opstap: "" };
+  const OPSTAP = [
+    "Nederlands en communicatie", "Wiskunde", "Wetenschap en techniek", "Aardrijkskunde", "Geschiedenis",
+    "Muzische vorming", "Lichamelijke opvoeding en motoriek", "ICT", "Veilige en gezonde levensstijl",
+    "Leren leren", "Sociaal-emotioneel leren", "Frans", "Rooms-katholieke godsdienst"
+  ];
+  const STATUS_LABEL = { kast: "In de kast", klas: "In de klas", uit: "Uitgeleend" };
+  try { const t = localStorage.getItem("klaskast-tab"); if (t) state.tab = t; } catch(e) {}
+  let lastKind = "boek";
+  try { lastKind = localStorage.getItem("klaskast-lastkind") || "boek"; } catch(e) {}
+
+  const norm = (s) => (s || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
+  const hash = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+  const colorFor = (s) => `var(${COLORS[hash(norm(s)) % COLORS.length]})`;
+  const esc = (s) => (s || "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const photoSrc = (it) => it.photoId ? "/_blob/" + it.photoId : (it.photoData || "");
+  const isImage = (f) => f && /^image\//.test(f.type);
+
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600);
+  }
+
+  // ---------- Storage ----------
+  // Local storage: IndexedDB (room for hundreds of items with photos), localStorage as fallback
+  const LOCAL_PX = 800;
+  let idbP = null, idbOk = false;
+  function idb() {
+    if (idbP) return idbP;
+    idbP = new Promise((res, rej) => {
+      try {
+        const r = indexedDB.open("klaskast", 1);
+        r.onupgradeneeded = () => r.result.createObjectStore("kv");
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      } catch (e) { rej(e); }
+    });
+    return idbP;
+  }
+  async function idbGet(k) { const d = await idb(); return new Promise((res, rej) => { const q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+  async function idbSet(k, v) { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); }
+  function loadLocal() {
+    try { const raw = localStorage.getItem(LS_KEY); if (raw) return JSON.parse(raw); } catch(e) {}
+    return EXAMPLES.map((e, i) => ({ id: "ex" + i, createdAt: Date.now() - i, ...e }));
+  }
+  async function loadLocalFull() {
+    try {
+      const v = await withTimeoutP(idbGet("items"), 4000);
+      idbOk = true;
+      if (Array.isArray(v)) return v;
+      const legacy = loadLocal();
+      try { await idbSet("items", legacy); } catch (_) {}
+      return legacy;
+    } catch (e) { idbOk = false; return loadLocal(); }
+  }
+  const withTimeoutP = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (_) {}
+  let saveChain = Promise.resolve();
+  function saveLocal() {
+    const snapshot = items.slice();
+    if (idbOk) {
+      saveChain = saveChain.then(() => idbSet("items", snapshot)).catch(() => toast("Opslaan lukt niet: de opslag van deze computer is vol of geblokkeerd. Maak een back-up."));
+      return true;
+    }
+    try { localStorage.setItem(LS_KEY, JSON.stringify(items)); return true; }
+    catch(e) { toast("Opslaan lukt niet: de opslag van je browser is vol of geblokkeerd. Maak een back-up."); return false; }
+  }
+  async function putItem(it) {
+    if (mode === "db") {
+      const { id, ...data } = it;
+      await db.collection(colPath).doc(id).set(data);
+    } else {
+      const i = items.findIndex(x => x.id === it.id);
+      if (i >= 0) items[i] = it; else items.unshift(it);
+      saveLocal(); render();
+    }
+  }
+  async function removeItem(it) {
+    if (mode === "db") {
+      await db.collection(colPath).doc(it.id).delete();
+      if (it.photoId && assets) { try { await assets.delete(it.photoId); } catch(e) {} }
+      if (it.backPhotoId && assets) { try { await assets.delete(it.backPhotoId); } catch(e) {} }
+    } else {
+      items = items.filter(x => x.id !== it.id); saveLocal(); render();
+    }
+  }
+
+  // ---------- Rendering ----------
+  function usedThemes() {
+    const m = new Map();
+    for (const it of items) for (const t of (it.themes || [])) {
+      const k = norm(t); if (!k) continue;
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], "nl"));
+  }
+  function pickableThemes() {
+    const set = new Set(PRESET_THEMES);
+    for (const [t] of usedThemes()) set.add(t);
+    return [...set].sort((a, b) => a.localeCompare(b, "nl"));
+  }
+  function matches(it, q) {
+    if (!q) return { ok: true, hits: [] };
+    const hits = (it.themes || []).filter(t => norm(t).includes(q));
+    const qn = q.replace(/^(nr\.?|nummer)\s*/, "");
+    const inTitle = norm(it.title).includes(q) || norm(it.author).includes(q) || norm(it.box).includes(q)
+      || (it.opstap || []).some(d => norm(d).includes(q)) || norm(it.loanTo).includes(q)
+      || (it.goals || []).some(g => norm(g.text).includes(q))
+      || (it.kind === "boek" && it.number && norm(it.number) === qn);
+    return { ok: hits.length > 0 || inTitle, hits: hits.map(norm) };
+  }
+
+  function render() {
+    const q = norm(state.q);
+    $("#clearQ").hidden = !q;
+    document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
+    document.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.k === state.klas)));
+
+    const themes = usedThemes();
+    $("#cloud").innerHTML = themes.length ? themes.map(([t, n]) =>
+      `<button type="button" class="tchip" data-theme="${esc(t)}" aria-pressed="${q === t}"><span class="dot" style="background:${colorFor(t)}"></span>${esc(t)} <span class="n">${n}</span></button>`
+    ).join("") : `<span class="note">Nog geen thema's. Sleep een foto in de app om je eerste boek of materiaal toe te voegen.</span>`;
+
+    const list = items
+      .filter(it => state.tab === "alles" || it.kind === state.tab)
+      .filter(it => !state.klas || it.kind !== "boek" || (it.klassen || []).includes(state.klas))
+      .filter(it => !state.status || (state.status === "mist" ? !!(it.missing || "").trim() : (it.status || "kast") === state.status))
+      .filter(it => !state.opstap || (it.opstap || []).includes(state.opstap))
+      .map(it => ({ it, m: matches(it, q) }))
+      .filter(x => x.m.ok)
+      .sort((a, b) => a.it.title.localeCompare(b.it.title, "nl"));
+
+    const nb = list.filter(x => x.it.kind === "boek").length, nm = list.length - nb;
+    const parts = [`${nb} ${nb === 1 ? "boek" : "boeken"}`, `${nm} ${nm === 1 ? "materiaal" : "materialen"}`].join(", ");
+    $("#count").textContent = q ? `${list.length} gevonden voor “${state.q.trim()}” · ${parts}` : parts;
+
+    if (!list.length) {
+      $("#grid").innerHTML = items.length
+        ? `<div class="empty" style="grid-column:1/-1"><strong>Niets gevonden</strong>Geen boeken of materialen bij deze zoekopdracht. Probeer een ander thema of een andere klas.</div>`
+        : `<div class="empty" style="grid-column:1/-1"><strong>Je klaskast is nog leeg</strong>Sleep een foto van een boek of materiaal in de app om te beginnen.</div>`;
+      return;
+    }
+    $("#grid").innerHTML = list.map(({ it, m }) => {
+      const src = photoSrc(it);
+      const cover = src
+        ? `<img src="${esc(src)}" alt="Foto van ${esc(it.title)}" loading="lazy">`
+        : `<div class="ph">${esc(it.title)}</div>`;
+      const kl = it.kind === "boek" && (it.klassen || []).length
+        ? `<div class="krow">${KLASSEN.filter(k => it.klassen.includes(k)).map(k => `<span class="kbadge ${k}">${k}</span>`).join("")}</div>` : "";
+      return `<button type="button" class="card" data-id="${esc(it.id)}">
+        <div class="cover" style="${src ? "" : "background:" + colorFor(it.title)}">
+          ${cover}
+          <span class="kind">${it.kind === "boek" ? "Boek" : "Materiaal"}</span>
+          ${it.example ? `<span class="ex">Voorbeeld</span>` : ""}
+        </div>
+        <div class="body">
+          <h3>${esc(it.title)}</h3>
+          ${(() => {
+            const bits = it.kind === "boek"
+              ? [it.number ? `<span class="nr">Nr. ${esc(it.number)}</span>` : "", it.author ? esc(it.author) : ""]
+              : [it.count != null && it.count !== "" ? `<span class="nr">${esc(String(it.count))} ${Number(it.count) === 1 ? "stuk" : "stuks"}</span>` : "", it.box ? `Themabox ${esc(it.box)}` : ""];
+            const s = bits.filter(Boolean).join(" · ");
+            return s ? `<span class="meta">${s}</span>` : "";
+          })()}
+          ${kl}
+          ${(() => {
+            const f = [];
+            if (it.status === "klas") f.push(`<span class="flag klas">In de klas</span>`);
+            if (it.status === "uit") f.push(`<span class="flag uit">Uitgeleend${it.loanTo ? ": " + esc(it.loanTo) : ""}</span>`);
+            if ((it.missing || "").trim()) f.push(`<span class="flag mist" title="${esc(it.missing)}">Onvolledig</span>`);
+            return f.length ? `<div class="flags">${f.join("")}</div>` : "";
+          })()}
+          ${it.kind === "boek" && it.description ? `<p>${esc(it.description)}</p>` : ""}
+          <div class="tags">${(it.themes || []).map(t => `<span class="tchip ${m.hits.includes(norm(t)) ? "hit" : ""}"><span class="dot" style="background:${colorFor(t)}"></span>${esc(norm(t))}</span>`).join("")}</div>
+        </div>
+      </button>`;
+    }).join("");
+  }
+
+  // ---------- Search, tabs, klas ----------
+  $("#q").addEventListener("input", e => { state.q = e.target.value; render(); });
+  $("#clearQ").addEventListener("click", () => { state.q = ""; $("#q").value = ""; render(); $("#q").focus(); });
+  $("#cloud").addEventListener("click", e => {
+    const b = e.target.closest("[data-theme]"); if (!b) return;
+    const t = b.dataset.theme;
+    state.q = norm(state.q) === t ? "" : t; $("#q").value = state.q; render();
+  });
+  document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+    state.tab = b.dataset.tab; try { localStorage.setItem("klaskast-tab", state.tab); } catch(e) {}
+    render();
+  }));
+  document.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { state.klas = b.dataset.k; render(); }));
+  $("#opstapFilter").innerHTML += OPSTAP.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join("");
+  $("#statusFilter").addEventListener("change", e => { state.status = e.target.value; render(); });
+  $("#opstapFilter").addEventListener("change", e => { state.opstap = e.target.value; render(); });
+  $("#grid").addEventListener("click", e => {
+    const c = e.target.closest(".card"); if (!c) return;
+    const it = items.find(x => x.id === c.dataset.id); if (it) { queue = []; queueTotal = 0; openDialog(it, null); }
+  });
+
+  // ---------- Photo queue (drag & drop / multi pick) ----------
+  let queue = [], queueTotal = 0;
+  function enqueue(files) {
+    const imgs = [...files].filter(isImage);
+    if (!imgs.length) { toast("Dat is geen foto. Sleep een JPG, PNG of HEIC-bestand."); return; }
+    if (dlg.open && editing) { toast("Bewaar of annuleer eerst het item dat open staat."); return; }
+    const wasEmpty = !dlg.open;
+    queue.push(...imgs); queueTotal += imgs.length;
+    if (wasEmpty) nextFromQueue(); else updateQueueInfo();
+  }
+  function nextFromQueue() {
+    if (!queue.length) { queueTotal = 0; if (dlg.open) dlg.close(); return; }
+    const f = queue.shift();
+    openDialog(null, f);
+  }
+  function updateQueueInfo() {
+    const done = queueTotal - queue.length;
+    $("#queueInfo").textContent = queueTotal > 1 ? `Foto ${done} van ${queueTotal}` : "";
+    $("#skipBtn").hidden = !(queueTotal > 1);
+  }
+
+  let dragDepth = 0;
+  const hasFiles = (e) => e.dataTransfer && [...(e.dataTransfer.types || [])].includes("Files");
+  window.addEventListener("dragenter", e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; if (!dlg.open) $("#overlay").hidden = false; });
+  window.addEventListener("dragover", e => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+  window.addEventListener("dragleave", e => { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $("#overlay").hidden = true; });
+  window.addEventListener("drop", e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); dragDepth = 0; $("#overlay").hidden = true;
+    if (dlg.open) {
+      const imgs = [...e.dataTransfer.files].filter(isImage);
+      if (!imgs.length) return;
+      const onBack = e.target.closest && e.target.closest("#backPrev");
+      const onFront = e.target.closest && e.target.closest("#photoPrev");
+      const hasFront = !!(photo.url || photo.id || photo.data);
+      if (onBack) setBackFile(imgs[0]);
+      else if (onFront) { setPhotoFile(imgs[0]); if (imgs[1] && currentKind() === "boek") setBackFile(imgs[1]); }
+      else if (hasFront && currentKind() === "boek") setBackFile(imgs[0]);
+      else { setPhotoFile(imgs[0]); if (imgs[1] && currentKind() === "boek") setBackFile(imgs[1]); }
+      return;
+    }
+    enqueue(e.dataTransfer.files);
+  });
+  $("#multiPick").addEventListener("change", e => { enqueue(e.target.files); e.target.value = ""; });
+  window.addEventListener("paste", e => {
+    const files = [...(e.clipboardData?.files || [])].filter(isImage);
+    if (!files.length) return;
+    if (dlg.open) setPhotoFile(files[0]); else enqueue(files);
+  });
+
+  // ---------- Dialog ----------
+  const dlg = $("#dlg");
+  let editing = null, formThemes = [], photo = { id: null, data: null, blob: null, url: null };
+  const currentKind = () => $("#kindBoek").checked ? "boek" : "materiaal";
+
+  function setKindUI() {
+    const k = currentKind();
+    $("#descField").hidden = k !== "boek";
+    $("#bookRow").hidden = k !== "boek";
+    $("#matRow").hidden = k !== "materiaal";
+    $("#klasField").hidden = k !== "boek";
+    $("#backSlot").hidden = k !== "boek";
+    $("#backHint").hidden = k !== "boek";
+    $("#frontName").hidden = k !== "boek";
+    $("#photoLabel").textContent = k === "boek" ? "Foto's" : "Foto";
+    $("#titleLabel").textContent = k === "boek" ? "Titel van het boek" : "Korte titel van het materiaal";
+    $("#fTitle").placeholder = k === "boek" ? "bv. Rupsje Nooitgenoeg" : "bv. Boerderijdieren puzzel";
+  }
+  document.querySelectorAll('input[name="kind"]').forEach(r => r.addEventListener("change", () => { setKindUI(); $("#fTitle").focus(); }));
+
+  function renderPick() {
+    const all = pickableThemes();
+    for (const t of formThemes) if (!all.includes(t)) all.push(t);
+    $("#pick").innerHTML = all.map(t =>
+      `<button type="button" data-t="${esc(t)}" aria-pressed="${formThemes.includes(t)}"><span class="dot" style="background:${colorFor(t)}"></span>${esc(t)}</button>`
+    ).join("");
+  }
+  $("#pick").addEventListener("click", e => {
+    const b = e.target.closest("[data-t]"); if (!b) return;
+    const t = b.dataset.t;
+    formThemes = formThemes.includes(t) ? formThemes.filter(x => x !== t) : [...formThemes, t];
+    b.setAttribute("aria-pressed", String(formThemes.includes(t)));
+  });
+  function addOther() {
+    const raw = $("#fOther").value;
+    const added = raw.split(/[,;]/).map(norm).filter(Boolean);
+    if (!added.length) return false;
+    added.forEach(t => { if (!formThemes.includes(t)) formThemes.push(t); });
+    $("#fOther").value = ""; renderPick();
+    return true;
+  }
+  $("#addOther").addEventListener("click", () => { addOther(); $("#fOther").focus(); });
+
+  // Enter jumps to the next box
+  $("#fTitle").addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    if (currentKind() === "boek") $("#fAuthor").focus();
+    else $("#fCount").focus();
+  });
+  const nextOnEnter = (from, to) => $(from).addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.ctrlKey || e.metaKey) return;
+    e.preventDefault(); typeof to === "function" ? to() : $(to).focus();
+  });
+  nextOnEnter("#fAuthor", "#fNumber");
+  nextOnEnter("#fNumber", "#fDesc");
+  nextOnEnter("#fCount", "#fBox");
+  nextOnEnter("#fBox", () => focusFirstTheme());
+  $("#fDesc").addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey) return;
+    e.preventDefault(); $("#k1").focus();
+  });
+  KLASSEN.forEach((k, i) => {
+    const el = $("#k" + (i + 1));
+    el.addEventListener("keydown", e => {
+      if (e.key !== "Enter" || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      if (i < 2) $("#k" + (i + 2)).focus(); else focusFirstTheme();
+    });
+  });
+  function focusFirstTheme() {
+    const b = $("#pick button"); if (!b) { $("#fOther").focus(); return; }
+    b.focus();
+    $("#pick").scrollTop = 0;
+  }
+  $("#fOther").addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    if (!addOther()) { const b = $("#opstapPick button"); if (b) b.focus(); else $("#form").requestSubmit(); }
+  });
+  $("#form").addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("#form").requestSubmit(); }
+  });
+
+  // photo
+  function showPhoto() {
+    const src = photo.url || (photo.id ? "/_blob/" + photo.id : photo.data);
+    const box = $("#photoPrev");
+    box.classList.toggle("has", !!src);
+    box.innerHTML = src ? `<img src="${esc(src)}" alt="Gekozen foto">` : "Sleep hier een foto";
+    $("#rmPhoto").hidden = !src;
+  }
+  async function shrink(file, max, quality, min = 0) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+      const side = Math.max(img.width, img.height);
+      const r = min && side < min ? min / side : Math.min(1, max / side);
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      return await new Promise(res => c.toBlob(res, "image/jpeg", quality));
+    } finally { URL.revokeObjectURL(url); }
+  }
+  // ---------- Automatic reading of the photos ----------
+  let sample = null, sampleImages = false, sampleReady = null, sampleDenied = false;
+  function loadSample() {
+    if (sampleReady) return sampleReady;
+    sampleReady = (async () => {
+      try {
+        if (!window.claude || !window.claude.use) return;
+        sample = await window.claude.use("sample");
+        if (sample) { const lim = await sample.limits().catch(() => null); sampleImages = !!(lim && lim.images); }
+      } catch (e) { sample = null; }
+    })();
+    return sampleReady;
+  }
+  loadSample();
+
+  const touched = new Set(), autoFilled = new Set();
+  ["fTitle","fAuthor","fDesc"].forEach(id => $("#" + id).addEventListener("input", () => { touched.add(id); autoFilled.delete(id); clearAuto(id); }));
+  function clearAuto(id) { const l = document.querySelector(`label[for="${id}"] .auto`); if (l) l.remove(); }
+  function markAuto(id) {
+    const l = document.querySelector(`label[for="${id}"]`);
+    if (l && !l.querySelector(".auto")) l.insertAdjacentHTML("beforeend", `<span class="auto">automatisch ingevuld, even nakijken</span>`);
+  }
+  function aiStatus(text, cls) {
+    const s = $("#aiStatus");
+    if (!text) { s.hidden = true; return; }
+    s.hidden = false; s.className = "ai" + (cls ? " " + cls : "");
+    s.innerHTML = (cls === "busy" ? `<span class="spin" aria-hidden="true"></span>` : "") + esc(text);
+  }
+
+  let frontRecogBlob = null, backRecogBlob = null, analyzeTimer = null, analyzeToken = 0;
+  function scheduleAnalyze() {
+    clearTimeout(analyzeTimer);
+    $("#rereadBtn").hidden = true;
+    aiStatus("Foto's bekijken…", "busy");
+    analyzeTimer = setTimeout(() => analyze(false), 600);
+  }
+  let runToken = 0;
+  async function analyze(manual) {
+    await loadSample();
+    if (!dlg.open) return;
+    if (!(frontOcrBlob || backOcrBlob || frontRecogBlob || backRecogBlob)) { aiStatus(""); return; }
+    const run = ++runToken;
+    $("#rereadBtn").hidden = true;
+    const r = await ocrAnalyze();
+    if (run !== runToken || !dlg.open) return;
+    const claudeOk = sample && sampleImages && !sampleDenied;
+    const isBoek = currentKind() === "boek";
+    const missing = !$("#fTitle").value.trim() || (isBoek && !$("#fAuthor").value.trim()) || (isBoek && backRecogBlob && !$("#fDesc").value.trim());
+    if (claudeOk && (r.error || missing)) {
+      aiStatus(r.error ? "Tekst lezen lukte niet op dit toestel. Ik probeer het via Claude…" : "Ik vraag Claude om de ontbrekende vakken aan te vullen…", "busy");
+      await claudeAnalyze(manual);
+    } else if (r.error) {
+      aiStatus(`Tekst lezen lukte niet op dit toestel. Vul zelf in${OCR_FAIL_EXTRA}. (technisch: ${r.detail})`);
+    }
+    if (run === runToken) $("#rereadBtn").hidden = false;
+  }
+  async function claudeAnalyze(manual) {
+    const imgs = [];
+    if (frontRecogBlob) imgs.push(frontRecogBlob);
+    if (backRecogBlob) imgs.push(backRecogBlob);
+    if (!imgs.length) { aiStatus(""); return; }
+    if (!imgs.length || !sample || !sampleImages || sampleDenied) return;
+    const token = ++analyzeToken;
+    aiStatus("Claude bekijkt de foto's… dit duurt meestal 10 à 30 seconden", "busy");
+    const which = frontRecogBlob && backRecogBlob
+      ? "Foto 1 is de VOORKANT en foto 2 is de ACHTERKANT van hetzelfde boek."
+      : backRecogBlob
+        ? "De foto is de ACHTERKANT van een boek."
+        : "De foto is waarschijnlijk de VOORKANT van een prentenboek. Het kan ook een klasmateriaal zijn (puzzel, spel, knutselmateriaal).";
+    const prompt = `Je helpt een kleuterjuf in Vlaanderen haar prentenboeken te ordenen. ${which}
+
+Bekijk de foto's goed en lees ALLE tekst die erop gedrukt staat, ook kleine letters.
+
+Antwoord ALLEEN met JSON, zonder uitleg, in precies deze vorm:
+{"isBook": true, "recognized": true, "title": "", "author": "", "summary": ""}
+
+Regels:
+- isBook: true als het een boek is (voor- of achterkant), false als het iets anders is.
+- recognized: true als je redelijk zeker weet welk boek het is.
+- title: de titel zoals die op de kaft staat.
+- author: de naam van de auteur zoals die op de kaft staat (vaak boven of onder de titel). Staat er ook een illustrator op, zet die erachter na een komma. Laat woorden als "door" of "met illustraties van" weg. Staat er geen naam op maar ken je het boek zeker, vul dan de auteur in die je kent.
+- Vul title en author ook in als je het boek zelf niet kent: lezen wat er staat is genoeg.
+- summary: 2 tot 3 korte, eenvoudige zinnen in het Nederlands over waar het verhaal over gaat, VOLLEDIG in je eigen woorden. ${backRecogBlob ? "Baseer je op de tekst op de achterkant. " : ""}Kopieer geen zinnen of zinsdelen van het boek. Laat prijs, ISBN, recensies en uitgeverstekst weg. Als er geen verhaaltekst te lezen is en je het boek niet zeker kent, laat summary leeg. Verzin niets.
+- Is het geen boek: isBook false, title een korte naam voor het voorwerp (bv. "Houten boerderijpuzzel"), rest leeg.`;
+    try {
+      const opts = { images: imgs };
+      if (manual) opts.cache = false;
+      let r;
+      try { r = await sample.json(prompt, opts); }
+      catch (e) {
+        if (e && e.code === "invalid_json" && e.text) { const m = e.text.match(/\{[\s\S]*\}/); r = m ? JSON.parse(m[0]) : null; }
+        else throw e;
+      }
+      if (token !== analyzeToken || !dlg.open) return;
+      if (!r) { aiStatus("Ik kon niets lezen op de foto. Vul zelf in."); return; }
+      const fill = (id, v) => {
+        v = (v || "").toString().trim();
+        if (!v || touched.has(id)) return false;
+        const cur = $("#" + id).value.trim();
+        if (cur && !autoFilled.has(id)) return false;
+        $("#" + id).value = v; autoFilled.add(id); markAuto(id); return true;
+      };
+      if (r.isBook === false) {
+        const t = currentKind() === "materiaal" ? fill("fTitle", r.title) : false;
+        aiStatus(t ? "Titel ingevuld. Even nakijken." : "Dit lijkt geen boek. Vul zelf in.", t ? "ok" : "");
+        return;
+      }
+      if (currentKind() !== "boek" && !touched.has("fTitle")) { $("#kindBoek").checked = true; setKindUI(); }
+      const done = [];
+      if (fill("fTitle", r.title)) done.push("titel");
+      if (fill("fAuthor", r.author)) done.push("auteur");
+      if (fill("fDesc", r.summary)) done.push("omschrijving");
+      if (done.length) aiStatus(`Ingevuld: ${done.join(", ")}. Even nakijken.`, "ok");
+      else aiStatus("Niets nieuws gevonden om in te vullen. Vul zelf aan.");
+    } catch (err) {
+      if (token !== analyzeToken) return;
+      const c = err && err.code;
+      if (c === "images_unavailable" || c === "unavailable") sampleDenied = true;
+      aiStatus(
+        c === "not_granted" ? "Je gaf geen toestemming om foto's te laten lezen. Herlaad de pagina en kies Toestaan." :
+        c === "rate_limited" ? "Even te veel foto's tegelijk. Wacht een momentje en klik op Opnieuw lezen." :
+        c === "image_rejected" ? "Deze foto kan niet gelezen worden. Gebruik een JPG of PNG." :
+        "Lezen lukte niet. Klik op Opnieuw lezen."
+      );
+    }
+  }
+
+  // ---------- Reading text in the browser (works without Claude) ----------
+  let ocrWorkerP = null, ocrToken = 0, ocrLogger = null;
+  let frontOcrBlob = null, backOcrBlob = null, lastField = "fTitle";
+  const abs = (p) => new URL(p, location.href).href;
+  function getOcr() {
+    if (ocrWorkerP) return ocrWorkerP;
+    if (!window.Tesseract) return Promise.reject(new Error("no-tesseract"));
+    ocrWorkerP = (async () => {
+      const b64 = (id) => (document.getElementById(id)?.textContent || "").replace(/\s+/g, "");
+      const bytes = (str) => { const bin = atob(str); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+      const inline = !!document.getElementById("nldData");
+      let data;
+      if (inline) data = bytes(b64("nldData"));
+      else { const r = await fetch(abs("nld-traineddata.bin")); if (!r.ok) throw new Error("taalbestand " + r.status); data = new Uint8Array(await r.arrayBuffer()); }
+      if (!data.length) throw new Error("taalgegevens ontbreken");
+      const ways = [];
+      if (inline) {
+        const workerURL = URL.createObjectURL(new Blob([bytes(b64("tessWorker"))], { type: "text/javascript" }));
+        const coreURL = URL.createObjectURL(new Blob([document.getElementById("tessCore").textContent], { type: "text/javascript" })) + "#core.js";
+        ways.push({ workerPath: workerURL, corePath: coreURL, workerBlobURL: false });
+      }
+      ways.push({ workerPath: abs("tess-worker.min.js"), corePath: abs("tess-core.wasm.js"), workerBlobURL: false });
+      ways.push({ workerPath: abs("tess-worker.min.js"), corePath: abs("tess-core.wasm.js"), workerBlobURL: true });
+      const errs = [];
+      for (const way of ways) {
+        try { return await startWorker(data.slice(), way, 90000); }
+        catch (e) { errs.push(String((e && e.message) || e).slice(0, 80)); }
+      }
+      throw new Error(errs.join(" / "));
+    })().catch(e => { ocrWorkerP = null; throw e; });
+    return ocrWorkerP;
+  }
+  function startWorker(data, way, ms) {
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const fail = (e) => { if (!done) { done = true; clearTimeout(t); reject(e instanceof Error ? e : new Error(String(e))); } };
+      const t = setTimeout(() => fail(new Error("starten duurde te lang")), ms);
+      Promise.resolve().then(() => Tesseract.createWorker([{ code: "nld", data }], 1, {
+        ...way, cacheMethod: "none",
+        logger: (m) => { if (ocrLogger) ocrLogger(m); },
+        errorHandler: fail
+      })).then(w => {
+        if (done) { try { w.terminate(); } catch (_) {} return; }
+        done = true; clearTimeout(t); resolve(w);
+      }, fail);
+    });
+  }
+  const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
+  const PUBLISHERS = /\b(clavis|lannoo|gottmer|leopold|querido|lemniscaat|davidsfonds|ploegsma|holkema|zwijsen|standaard uitgeverij|pelckmans|unieboek|hemma|christofoor|rubinstein|eenhoorn|kwintessens|gakko|fontaine|veltman|ballon|deltas|zuidnederlandse|uitgeverij)\b/i;
+  const cleanLine = (t) => t.replace(/\s+/g, " ").replace(/^[^\p{L}\d"'„(]+/u, "").replace(/[^\p{L}\d.!?"')…]+$/u, "").trim();
+  const letterRatio = (t) => (t.match(/\p{L}/gu) || []).length / Math.max(1, t.replace(/\s/g, "").length);
+  const isCaps = (t) => t === t.toUpperCase() && /\p{Lu}{3}/u.test(t);
+  const sentenceCase = (t) => isCaps(t) ? t.charAt(0) + t.slice(1).toLowerCase() : t;
+  const nameCase = (t) => isCaps(t) ? t.toLowerCase().replace(/(^|[\s\-'])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()).replace(/\b(Van|De|Der|Den|Ten|Ter|Von)\b(?=\s)/g, w => w.toLowerCase()).replace(/^(\p{Ll})/u, c => c.toUpperCase()) : t;
+  const SHORT_OK = /^(de|en|in|op|ik|je|ze|er|is|te|om|al|nu|zo|ja|of|na|me|we|u|'t|an|ga|zo)$/i;
+  function trimJunk(t) {
+    const w = t.split(" ");
+    while (w.length > 1 && (/[^\p{L}'’]/u.test(w[0]) && !/\p{L}{2}/u.test(w[0]) || (w[0].length <= 2 && !SHORT_OK.test(w[0])))) w.shift();
+    while (w.length > 1 && (/^[^\p{L}]*\p{L}?[^\p{L}]*$/u.test(w[w.length - 1]) && !/[.!?…]$/.test(w[w.length - 1]))) w.pop();
+    return w.join(" ").trim();
+  }
+  const NAME_RE = /^\p{Lu}[\p{L}'.\-]*(?:\s+(?:van|de|der|den|ten|ter|von|le|la|du|di|'t|\p{Lu}[\p{L}'.\-]*)){1,4}$/u;
+
+  async function ocrLines(blob) {
+    const w = await getOcr();
+    const { data } = await withTimeout(w.recognize(blob, {}, { text: true, blocks: true }), 120000, "lezen duurde te lang");
+    const lines = [];
+    for (const b of (data.blocks || [])) for (const p of (b.paragraphs || [])) for (const l of (p.lines || [])) {
+      for (const part of (l.text || "").split(/\s[|•\/]\s|\|/)) {
+        const text = trimJunk(cleanLine(part));
+        const letters = (text.match(/\p{L}/gu) || []).length;
+        if (letters < 3 || (l.confidence || 0) < 45 || letterRatio(text) < 0.6) continue;
+        lines.push({ text, conf: l.confidence || 0, h: l.bbox.y1 - l.bbox.y0, y: l.bbox.y0 });
+      }
+    }
+    return lines;
+  }
+  function guessFront(lines, otherText) {
+    const ls = lines.filter(l => !PUBLISHERS.test(l.text)).map(l => {
+      const n = nameCase(l.text.replace(/^(tekst en (illustraties|tekeningen)|geschreven door|met (illustraties|tekeningen) van|illustraties|tekeningen|tekst|door|van)\s*:?\s+/i, "").trim());
+      return { ...l, name: NAME_RE.test(n) && n.split(" ").length <= 4 ? n : "" };
+    });
+    if (!ls.length) return {};
+    const nonNames = ls.filter(l => !l.name);
+    const maxH = nonNames.length ? Math.max(...nonNames.map(l => l.h)) : 0;
+    const titleLines = nonNames.filter(l => l.h >= maxH * 0.7 && (l.text.match(/\p{L}/gu) || []).length >= 4).sort((a, b) => a.y - b.y).slice(0, 3);
+    const title = titleLines.length ? sentenceCase(titleLines.map(l => l.text).join(" ")) : "";
+    // names: smaller lines that look like a person; correct misreads with the back cover text
+    const names = ls.filter(l => l.name).sort((a, b) => a.y - b.y).map(l => {
+      if (!otherText) return l.name;
+      const last = l.name.split(" ").pop().replace(/[^\p{L}'-]/gu, "");
+      if (last.length < 3) return l.name;
+      const n = l.name.split(" ").length;
+      const m = otherText.match(new RegExp("(?<![\\p{L}-])((?:\\p{Lu}[\\p{Ll}']+\\s+){" + (n - 1) + "})" + last + "(?![\\p{L}])", "u"));
+      if (m) return (m[1] + last).trim();
+      return l.name;
+    });
+    return { title, author: [...new Set(names)].slice(0, 2).join(", ") };
+  }
+  function guessBack(lines) {
+    const keep = lines.filter(l =>
+      !/isbn|nur\s*\d|€|www\.|http|@|\bprijs\b|\bbarcode\b/i.test(l.text) &&
+      !PUBLISHERS.test(l.text) &&
+      (l.text.split(" ").length >= 3 || /[.!?…]$/.test(l.text))
+    ).sort((a, b) => a.y - b.y);
+    const mostlyCaps = (t) => { const L = t.match(/\p{L}/gu) || []; return L.length > 3 && L.filter(c => c === c.toUpperCase()).length / L.length > 0.8; };
+    let txt = keep.map(l => mostlyCaps(l.text) ? l.text.replace(/\s\p{Ll}(?=\s)/gu, "").toLowerCase() : l.text).join(" ").replace(/(\p{L})- (\p{Ll})/gu, "$1$2").replace(/\s+/g, " ").trim();
+    txt = txt.replace(/(^|[.!?…]\s+)(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
+    if (txt.length > 800) { const cut = txt.slice(0, 800); const i = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? ")); txt = i > 200 ? cut.slice(0, i + 1) : cut; }
+    return txt;
+  }
+  function fillField(id, v) {
+    v = (v || "").toString().trim();
+    if (!v || touched.has(id)) return false;
+    const cur = $("#" + id).value.trim();
+    if (cur && !autoFilled.has(id)) return false;
+    $("#" + id).value = v; autoFilled.add(id); markAuto(id); return true;
+  }
+  function showOcrChips(all) {
+    const uniq = [...new Set(all.map(l => l.text))].slice(0, 40);
+    $("#ocrChips").innerHTML = uniq.map(t => `<button type="button" data-line="${esc(t)}">${esc(t)}</button>`).join("");
+    $("#ocrPanel").hidden = !uniq.length;
+  }
+  ["fTitle","fAuthor","fNumber","fDesc","fBox"].forEach(id => $("#" + id).addEventListener("focus", () => { lastField = id; }));
+  $("#ocrChips").addEventListener("mousedown", e => { if (e.target.closest("[data-line]")) e.preventDefault(); });
+  $("#ocrChips").addEventListener("click", e => {
+    const b = e.target.closest("[data-line]"); if (!b) return;
+    let id = lastField;
+    if ($("#" + id).closest("[hidden]")) id = "fTitle";
+    const el = $("#" + id), t = b.dataset.line;
+    if (id === "fDesc" && el.value.trim()) el.value = el.value.trim() + " " + t;
+    else el.value = id === "fTitle" ? sentenceCase(t) : id === "fAuthor" ? nameCase(t) : t;
+    touched.add(id); autoFilled.delete(id); clearAuto(id);
+    el.focus();
+  });
+
+  async function ocrAnalyze() {
+    const jobs = [];
+    if (frontOcrBlob) jobs.push(["front", frontOcrBlob]);
+    if (backOcrBlob) jobs.push(["back", backOcrBlob]);
+    if (!jobs.length) return { error: false };
+    if (!window.Tesseract) return { error: true, detail: "leesfunctie niet geladen" };
+    const token = ++ocrToken;
+    let step = 0;
+    ocrLogger = (m) => {
+      if (token !== ocrToken) return;
+      if (m.status === "recognizing text") aiStatus(`Tekst lezen${jobs.length > 1 ? ` (foto ${step} van ${jobs.length})` : ""}… ${Math.round((m.progress || 0) * 100)}%`, "busy");
+      else aiStatus("Leesfunctie opstarten… de eerste keer duurt dit wat langer", "busy");
+    };
+    aiStatus("Leesfunctie opstarten…", "busy");
+    try {
+      const res = {}; const all = [];
+      for (const [k, b] of jobs) { step++; res[k] = await ocrLines(b); all.push(...res[k]); }
+      if (token !== ocrToken || !dlg.open) return { error: false };
+      showOcrChips(all);
+      const done = [];
+      if (res.front) {
+        const g = guessFront(res.front, res.back ? res.back.map(l => l.text).join(" ") : "");
+        if (fillField("fTitle", g.title)) done.push("titel");
+        if (currentKind() === "boek" && fillField("fAuthor", g.author)) done.push("auteur");
+      } else if (res.back && !$("#fTitle").value.trim()) {
+        const g = guessFront(res.back);
+        if (fillField("fTitle", g.title)) done.push("titel");
+      }
+      if (res.back && currentKind() === "boek" && fillField("fDesc", guessBack(res.back))) done.push("tekst van de achterkant");
+      const noTitle = res.front && !$("#fTitle").value.trim() ? " De titel kon ik niet lezen (sierletters?), typ die zelf." : "";
+      aiStatus(done.length
+        ? `Gelezen: ${done.join(", ")}. Even nakijken.${noTitle} Klopt iets niet? Klik in een vak en dan op een stukje tekst hieronder.`
+        : (all.length ? "Klik in een vak en dan op een stukje gelezen tekst hieronder om het over te nemen." : "Geen tekst gevonden. Probeer een scherpere foto, recht van voren."), done.length ? "ok" : "");
+      return { error: false };
+    } catch (e) {
+      ocrWorkerP = null;
+      return { error: true, detail: String((e && e.message) || e).slice(0, 160) };
+    }
+  }
+
+  // ---------- Back cover ----------
+  let back = { id: null, data: null, blob: null, url: null };
+  function showBack() {
+    const src = back.url || (back.id ? "/_blob/" + back.id : back.data);
+    const box = $("#backPrev");
+    box.classList.toggle("has", !!src);
+    box.innerHTML = src ? `<img src="${esc(src)}" alt="Achterkant van het boek">` : "Sleep hier de achterkant";
+    $("#rmBack").hidden = !src;
+  }
+
+  async function setBackFile(f) {
+    try {
+      if (currentKind() !== "boek") { $("#kindBoek").checked = true; setKindUI(); }
+      Promise.all([shrink(f, 1200, 0.85), shrink(f, 1800, 0.9, 1400)]).then(([b, o]) => { backRecogBlob = b; backOcrBlob = o; scheduleAnalyze(); }).catch(() => aiStatus("Deze foto kan niet gelezen worden. Gebruik een JPG of PNG."));
+      if (assets) {
+        back.blob = await shrink(f, 1000, 0.82);
+        if (back.url) URL.revokeObjectURL(back.url);
+        back.url = URL.createObjectURL(back.blob); back.id = null; back.data = null;
+      } else {
+        const b = await shrink(f, idbOk ? LOCAL_PX : 420, 0.75);
+        back.data = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
+        back.blob = null; back.id = null;
+      }
+      showBack();
+    } catch(err) { toast("Deze foto kon niet gelezen worden. Probeer een JPG of PNG."); }
+  }
+  $("#fBack").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) setBackFile(f); e.target.value = ""; });
+  $("#rmBack").addEventListener("click", () => {
+    if (back.url) URL.revokeObjectURL(back.url);
+    back = { id: null, data: null, blob: null, url: null }; backRecogBlob = null; backOcrBlob = null; showBack();
+  });
+  const bprev = $("#backPrev");
+  bprev.addEventListener("dragover", e => { e.preventDefault(); bprev.classList.add("over"); });
+  bprev.addEventListener("dragleave", () => bprev.classList.remove("over"));
+  bprev.addEventListener("drop", () => bprev.classList.remove("over"));
+
+  async function setPhotoFile(f) {
+    try {
+      Promise.all([shrink(f, 1200, 0.85), shrink(f, 1800, 0.9, 1400)]).then(([b, o]) => { frontRecogBlob = b; frontOcrBlob = o; scheduleAnalyze(); }).catch(() => aiStatus("Deze foto kan niet gelezen worden. Gebruik een JPG of PNG."));
+      if (assets) {
+        photo.blob = await shrink(f, 1000, 0.82);
+        if (photo.url) URL.revokeObjectURL(photo.url);
+        photo.url = URL.createObjectURL(photo.blob); photo.id = null; photo.data = null;
+      } else {
+        const b = await shrink(f, idbOk ? LOCAL_PX : 420, 0.75);
+        photo.data = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
+        photo.blob = null; photo.id = null;
+      }
+      showPhoto();
+    } catch(err) { toast("Deze foto kon niet gelezen worden. Probeer een JPG of PNG."); }
+  }
+  $("#fPhoto").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) setPhotoFile(f); e.target.value = ""; });
+  $("#rereadBtn").addEventListener("click", () => analyze(true));
+  $("#rmPhoto").addEventListener("click", () => {
+    frontRecogBlob = null; frontOcrBlob = null;
+    if (photo.url) URL.revokeObjectURL(photo.url);
+    photo = { id: null, data: null, blob: null, url: null }; showPhoto();
+  });
+  const prev = $("#photoPrev");
+  prev.addEventListener("dragover", e => { e.preventDefault(); prev.classList.add("over"); });
+  prev.addEventListener("dragleave", () => prev.classList.remove("over"));
+  prev.addEventListener("drop", () => prev.classList.remove("over"));
+
+  // ---------- Op.stap, doelen, status, past goed bij ----------
+  let formOpstap = [], formGoals = [];
+  function renderOpstap() {
+    $("#opstapPick").innerHTML = OPSTAP.map(d =>
+      `<button type="button" data-d="${esc(d)}" aria-pressed="${formOpstap.includes(d)}">${esc(d)}</button>`).join("");
+  }
+  $("#opstapPick").addEventListener("click", e => {
+    const b = e.target.closest("[data-d]"); if (!b) return;
+    const d = b.dataset.d;
+    formOpstap = formOpstap.includes(d) ? formOpstap.filter(x => x !== d) : [...formOpstap, d];
+    b.setAttribute("aria-pressed", String(formOpstap.includes(d)));
+  });
+  const safeUrl = (u) => { try { const x = new URL(u.trim()); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch (_) { return ""; } };
+  function renderGoals() {
+    $("#goalList").innerHTML = formGoals.map((g, i) => {
+      const label = esc(g.text || g.url);
+      const body = g.url ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">${label}</a>` : `<span>${label}</span>`;
+      return `<div class="goal">${body}<button type="button" data-rm="${i}" aria-label="Doel verwijderen">×</button></div>`;
+    }).join("");
+  }
+  $("#goalList").addEventListener("click", e => {
+    const b = e.target.closest("[data-rm]"); if (!b) return;
+    formGoals.splice(+b.dataset.rm, 1); renderGoals();
+  });
+  function addGoal() {
+    const text = $("#fGoal").value.trim(), rawUrl = $("#fGoalUrl").value.trim();
+    if (!text && !rawUrl) return false;
+    const url = rawUrl ? safeUrl(rawUrl) : "";
+    if (rawUrl && !url) { toast("Die link klopt niet. Kopieer hem opnieuw uit de adresbalk."); $("#fGoalUrl").focus(); return true; }
+    formGoals.push({ text: text || "", url });
+    $("#fGoal").value = ""; $("#fGoalUrl").value = ""; renderGoals();
+    return true;
+  }
+  $("#addGoal").addEventListener("click", () => { addGoal(); $("#fGoal").focus(); });
+  nextOnEnter("#fGoal", "#fGoalUrl");
+  nextOnEnter("#fGoalUrl", () => { if (!addGoal()) $("#stKast").focus(); else $("#fGoal").focus(); });
+  function setStatusUI() { $("#fLoanTo").hidden = !$("#stUit").checked; }
+  document.querySelectorAll('input[name="status"]').forEach(r => r.addEventListener("change", () => { setStatusUI(); if ($("#stUit").checked) $("#fLoanTo").focus(); }));
+  nextOnEnter("#fLoanTo", "#fMissing");
+  nextOnEnter("#fMissing", "#fAdapt");
+  const currentStatus = () => $("#stKlas").checked ? "klas" : $("#stUit").checked ? "uit" : "kast";
+
+  function renderMatches(it) {
+    if (!it) { $("#matchField").hidden = true; return; }
+    const mine = new Set((it.themes || []).map(norm));
+    const rel = items.filter(x => x.id !== it.id).map(x => {
+      const shared = (x.themes || []).map(norm).filter(t => mine.has(t));
+      return { x, shared };
+    }).filter(r => r.shared.length)
+      .sort((a, b) => (b.shared.length - a.shared.length) || ((a.x.kind === it.kind) - (b.x.kind === it.kind)) || a.x.title.localeCompare(b.x.title, "nl"))
+      .slice(0, 12);
+    $("#matchField").hidden = !rel.length;
+    $("#matchList").innerHTML = rel.map(({ x, shared }) => {
+      const src = photoSrc(x);
+      return `<button type="button" data-open="${esc(x.id)}">
+        <span class="mthumb" style="${src ? "" : "background:" + colorFor(x.title)}">${src ? `<img src="${esc(src)}" alt="">` : esc(x.title.charAt(0))}</span>
+        <span class="mtxt"><strong>${esc(x.title)}</strong><small>${x.kind === "boek" ? "Boek" : "Materiaal"} · ${esc(shared.join(", "))}</small></span>
+      </button>`;
+    }).join("");
+  }
+  $("#matchList").addEventListener("click", e => {
+    const b = e.target.closest("[data-open]"); if (!b) return;
+    const x = items.find(i => i.id === b.dataset.open); if (x) openDialog(x, null);
+  });
+
+  function openDialog(it, file) {
+    editing = it || null;
+    $("#dlgTitle").textContent = it ? "Bewerken" : (file ? "Nieuwe foto invullen" : "Toevoegen");
+    $("#form").reset();
+    const kind = it ? it.kind : (state.tab === "materiaal" ? "materiaal" : state.tab === "boek" ? "boek" : lastKind);
+    $(kind === "materiaal" ? "#kindMat" : "#kindBoek").checked = true;
+    $("#fTitle").value = it?.title || "";
+    $("#fDesc").value = it?.description || "";
+    KLASSEN.forEach((k, i) => $("#k" + (i + 1)).checked = !!(it?.klassen || []).includes(k));
+    formThemes = [...(it?.themes || [])].map(norm);
+    if (photo.url) URL.revokeObjectURL(photo.url);
+    photo = { id: it?.photoId || null, data: it?.photoData || null, blob: null, url: null };
+    $("#fAuthor").value = it?.author || "";
+    $("#fNumber").value = it?.number || "";
+    $("#fCount").value = (it && it.count != null) ? it.count : "";
+    $("#fBox").value = it?.box || "";
+    const nums = items.filter(x => x.kind === "boek").map(x => parseInt(x.number, 10)).filter(n => !isNaN(n));
+    const nextNr = nums.length ? Math.max(...nums) + 1 : 1;
+    $("#fNumber").placeholder = `volgend vrij: ${nextNr}`;
+    const boxes = [...new Set(items.map(x => (x.box || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "nl"));
+    $("#boxList").innerHTML = boxes.map(b => `<option value="${esc(b)}">`).join("");
+    if (back.url) URL.revokeObjectURL(back.url);
+    back = { id: it?.backPhotoId || null, data: it?.backPhotoData || null, blob: null, url: null };
+    frontRecogBlob = null; backRecogBlob = null; frontOcrBlob = null; backOcrBlob = null; analyzeToken++; ocrToken++; clearTimeout(analyzeTimer); showBack();
+    $("#ocrPanel").hidden = true; $("#ocrChips").innerHTML = ""; lastField = "fTitle";
+    touched.clear(); autoFilled.clear(); aiStatus(""); $("#rereadBtn").hidden = true;
+    document.querySelectorAll("#form .auto").forEach(n => n.remove());
+    $("#delBtn").hidden = !it; $("#confirmDel").hidden = true;
+    formOpstap = [...(it?.opstap || [])];
+    formGoals = (it?.goals || []).map(g => ({ text: g.text || "", url: g.url || "" }));
+    $("#fGoal").value = ""; $("#fGoalUrl").value = "";
+    $(it?.status === "klas" ? "#stKlas" : it?.status === "uit" ? "#stUit" : "#stKast").checked = true;
+    $("#fLoanTo").value = it?.loanTo || "";
+    $("#fMissing").value = it?.missing || "";
+    $("#fAdapt").value = it?.adaptations || "";
+    setStatusUI(); renderOpstap(); renderGoals(); renderMatches(it);
+    $("#form").scrollTop = 0; dlg.scrollTop = 0;
+    setKindUI(); renderPick(); showPhoto(); updateQueueInfo();
+    if (!dlg.open) dlg.showModal();
+    if (file) setPhotoFile(file);
+    setTimeout(() => $("#fTitle").focus(), 30);
+  }
+  $("#addBtn").addEventListener("click", () => { queue = []; queueTotal = 0; openDialog(null, null); });
+  $("#cancelBtn").addEventListener("click", () => { queue = []; queueTotal = 0; dlg.close(); });
+  dlg.addEventListener("cancel", () => { queue = []; queueTotal = 0; });
+  $("#skipBtn").addEventListener("click", () => nextFromQueue());
+  $("#delBtn").addEventListener("click", () => { $("#confirmDel").hidden = false; $("#noDel").focus(); });
+  $("#noDel").addEventListener("click", () => { $("#confirmDel").hidden = true; });
+  $("#yesDel").addEventListener("click", async () => {
+    if (!editing) return;
+    try { await removeItem(editing); dlg.close(); toast("Verwijderd"); }
+    catch(e) { toast("Verwijderen lukte niet. Probeer het opnieuw."); }
+  });
+
+  $("#form").addEventListener("submit", async e => {
+    e.preventDefault();
+    addOther();
+    if ($("#fGoal").value.trim() || $("#fGoalUrl").value.trim()) addGoal();
+    const title = $("#fTitle").value.trim();
+    if (!title) { toast("Vul eerst een titel in."); $("#fTitle").focus(); return; }
+    const save = $("#saveBtn"); save.disabled = true; save.textContent = "Bewaren…";
+    try {
+      const kind = currentKind();
+      const oldPhotoId = editing?.photoId || null;
+      let photoId = photo.id, photoData = photo.data;
+      if (photo.blob && assets) {
+        const up = await assets.upload(photo.blob);
+        photoId = up.id; photoData = null;
+      }
+      const oldBackId = editing?.backPhotoId || null;
+      let backId = back.id, backData = back.data;
+      if (kind === "boek" && back.blob && assets) {
+        const up = await assets.upload(back.blob);
+        backId = up.id; backData = null;
+      }
+      if (kind !== "boek") { backId = null; backData = null; }
+      const it = {
+        ...(editing || {}),
+        id: editing?.id || ("i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+        kind, title,
+        description: kind === "boek" ? $("#fDesc").value.trim() : (editing?.description || ""),
+        author: kind === "boek" ? $("#fAuthor").value.trim() : (editing?.author || ""),
+        number: kind === "boek" ? $("#fNumber").value.trim() : (editing?.number || ""),
+        count: kind === "materiaal" && $("#fCount").value !== "" ? Math.max(0, parseInt($("#fCount").value, 10) || 0) : (kind === "materiaal" ? null : (editing?.count ?? null)),
+        box: kind === "materiaal" ? $("#fBox").value.trim() : (editing?.box || ""),
+        klassen: kind === "boek" ? KLASSEN.filter((k, i) => $("#k" + (i + 1)).checked) : [],
+        themes: formThemes,
+        opstap: formOpstap,
+        goals: formGoals,
+        status: currentStatus(),
+        loanTo: currentStatus() === "uit" ? $("#fLoanTo").value.trim() : "",
+        missing: $("#fMissing").value.trim(),
+        adaptations: $("#fAdapt").value.trim(),
+        photoId: photoId || null,
+        photoData: photoData || null,
+        backPhotoId: backId || null,
+        backPhotoData: backData || null,
+        example: false,
+        createdAt: editing?.createdAt || Date.now(),
+        updatedAt: Date.now()
+      };
+      await putItem(it);
+      if (mode === "db" && oldPhotoId && oldPhotoId !== it.photoId && assets) { try { await assets.delete(oldPhotoId); } catch(_) {} }
+      if (mode === "db" && oldBackId && oldBackId !== it.backPhotoId && assets) { try { await assets.delete(oldBackId); } catch(_) {} }
+      lastKind = kind; try { localStorage.setItem("klaskast-lastkind", kind); } catch(_) {}
+      toast(editing ? "Wijzigingen bewaard" : `“${title}” toegevoegd`);
+      if (!editing && queue.length) nextFromQueue();
+      else { queue = []; queueTotal = 0; dlg.close(); }
+    } catch(err) {
+      toast(err && err.code === "permission_denied" ? "Je hebt geen rechten om hier iets te bewaren." : "Bewaren lukte niet. Probeer het opnieuw.");
+    } finally { save.disabled = false; save.textContent = "Bewaren"; }
+  });
+
+  // ---------- Back-up ----------
+  const bdlg = $("#bdlg");
+  let lastBackupText = "";
+  function bkStatus(t, cls) { const s = $("#bkStatus"); s.hidden = !t; s.className = "ai" + (cls ? " " + cls : ""); s.innerHTML = (cls === "busy" ? `<span class="spin" aria-hidden="true"></span>` : "") + esc(t || ""); }
+  $("#backupBtn").addEventListener("click", () => { bkStatus(""); $("#bkCopy").hidden = true; bdlg.showModal(); });
+  $("#bkClose").addEventListener("click", () => bdlg.close());
+  const blobToDataUrl = (b) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+  async function assetAsData(id) {
+    try { const r = await fetch("/_blob/" + id); if (!r.ok) return null; return await blobToDataUrl(await r.blob()); } catch (_) { return null; }
+  }
+  $("#bkMake").addEventListener("click", async () => {
+    const btn = $("#bkMake"); btn.disabled = true;
+    try {
+      bkStatus("Back-up voorbereiden…", "busy");
+      const out = [];
+      let i = 0, lostPhotos = 0;
+      for (const it of items) {
+        i++; if (i % 5 === 0) bkStatus(`Back-up voorbereiden… ${i} van ${items.length}`, "busy");
+        const c = { ...it };
+        if (c.photoId) { const d = await assetAsData(c.photoId); if (d) c.photoData = d; else lostPhotos++; }
+        if (c.backPhotoId) { const d = await assetAsData(c.backPhotoId); if (d) c.backPhotoData = d; else lostPhotos++; }
+        delete c.photoId; delete c.backPhotoId;
+        out.push(c);
+      }
+      const text = JSON.stringify({ app: "De Klaskast", version: 1, exportedAt: new Date().toISOString(), items: out });
+      lastBackupText = text;
+      const d = new Date(), pad = (n) => String(n).padStart(2, "0");
+      const filename = `klaskast-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+      const note = lostPhotos ? ` (${lostPhotos} foto's konden niet mee)` : "";
+      let dl = null;
+      try { dl = window.claude && window.claude.use ? await withTimeout(window.claude.use("downloads"), 4000, "x") : null; } catch (_) { dl = null; }
+      if (dl) {
+        try { await dl.save({ filename, data: text }); bkStatus(`Back-up bewaard: ${out.length} items${note}.`, "ok"); return; }
+        catch (e) { if (e && e.code === "cancelled") { bkStatus("Je hebt het bewaren geannuleerd."); return; } }
+      }
+      try {
+        const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+        const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } catch (_) {}
+      $("#bkCopy").hidden = false;
+      bkStatus(`Back-up klaar: ${out.length} items${note}. Kijk bij je downloads naar ${filename}. Niets gedownload? Klik op "Back-up kopiëren" en plak de tekst in een leeg tekstbestand.`, "ok");
+    } catch (e) {
+      bkStatus("De back-up maken lukte niet. Probeer het opnieuw.");
+    } finally { btn.disabled = false; }
+  });
+  $("#bkCopy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(lastBackupText); bkStatus("Gekopieerd. Plak het in een leeg tekstbestand (bv. Kladblok) en bewaar het.", "ok"); }
+    catch (_) { $("#bkText").value = lastBackupText; document.querySelector(".bk-paste").open = true; $("#bkText").select(); bkStatus("Kopiëren mocht niet. De tekst staat geselecteerd in het vak hieronder: druk Ctrl+C."); }
+  });
+  async function dataUrlToBlob(u) { const r = await fetch(u); return await r.blob(); }
+  async function restoreFrom(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (_) { bkStatus("Dit is geen geldige back-up van De Klaskast."); return; }
+    const list = Array.isArray(data) ? data : data && data.items;
+    if (!Array.isArray(list)) { bkStatus("Dit is geen geldige back-up van De Klaskast."); return; }
+    let ok = 0, fail = 0;
+    for (const raw of list) {
+      if (!raw || typeof raw !== "object" || !raw.title || !raw.id) { fail++; continue; }
+      bkStatus(`Terugzetten… ${ok + fail + 1} van ${list.length}`, "busy");
+      try {
+        const it = { ...raw };
+        delete it.photoId; delete it.backPhotoId;
+        for (const [dataKey, idKey, size] of [["photoData", "photoId", 1000], ["backPhotoData", "backPhotoId", 1000]]) {
+          const d = it[dataKey];
+          if (!d || !/^data:image\//.test(d)) { it[dataKey] = null; continue; }
+          if (mode === "db" && assets) {
+            const blob = await shrink(await dataUrlToBlob(d), size, 0.82);
+            const up = await assets.upload(blob); it[idKey] = up.id; it[dataKey] = null;
+          } else {
+            const blob = await shrink(await dataUrlToBlob(d), idbOk ? LOCAL_PX : 420, 0.75);
+            it[dataKey] = await blobToDataUrl(blob);
+          }
+        }
+        if (mode === "db") { const { id, ...rest } = it; await db.collection(colPath).doc(String(id)).set(rest); }
+        else { const i = items.findIndex(x => x.id === it.id); if (i >= 0) items[i] = it; else items.push(it); }
+        ok++;
+      } catch (_) { fail++; }
+    }
+    if (mode !== "db") { saveLocal(); render(); }
+    bkStatus(`Teruggezet: ${ok} items${fail ? `, ${fail} lukten niet` : ""}.`, ok ? "ok" : "");
+  }
+  $("#bkFile").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    bkStatus("Bestand lezen…", "busy");
+    try { await restoreFrom(await f.text()); } catch (_) { bkStatus("Dit bestand kon niet gelezen worden."); }
+  });
+  $("#bkPasteGo").addEventListener("click", () => { const t = $("#bkText").value.trim(); if (t) restoreFrom(t); });
+
+  // ---------- Boot ----------
+  items = loadLocal();
+  const localReady = loadLocalFull();
+  $("#storeNote").textContent = "Gegevens worden geladen…";
+  render();
+
+  (async () => {
+    if (!window.claude || !window.claude.use) { setLocalNote(); return; }
+    const timer = setTimeout(setLocalNote, 10000);
+    try {
+      const d = await window.claude.use("db");
+      if (!d) { clearTimeout(timer); setLocalNote(); return; }
+      let uid = null;
+      try { const u = await window.claude.use("user"); uid = u ? await u.id() : null; } catch (e) { uid = null; }
+      if (!uid) { clearTimeout(timer); setLocalNote(); return; }
+      db = d;
+      colPath = "data/users/" + uid;
+      try { assets = await window.claude.use("assets"); } catch(e) { assets = null; }
+      db.collection(colPath).onSnapshot(snap => {
+        clearTimeout(timer);
+        mode = "db";
+        items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        $("#storeNote").textContent = "Dit is jouw eigen klaskast. Alleen jij ziet wat hierin staat, ook als je de app deelt met collega's.";
+        render();
+      }, () => { clearTimeout(timer); setLocalNote(); });
+    } catch(e) { clearTimeout(timer); setLocalNote(); }
+  })();
+
+  async function setLocalNote() {
+    if (mode === "db") return;
+    mode = "local"; db = null; assets = null;
+    const loaded = await localReady;
+    if (mode !== "local") return;
+    items = loaded;
+    $("#storeNote").textContent = LOCAL_NOTE;
+    render();
+  }
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); }); }
+</script>
+</body>
+</html>
