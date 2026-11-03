@@ -32,5 +32,33 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "orientation": "any",
+  "dir": "ltr",
+  "display_override": [
+    "standalone"
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-1.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Overzicht van al je boeken en materialen"
+    },
+    {
+      "src": "screenshot-2.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Zoeken op thema"
+    },
+    {
+      "src": "screenshot-3.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Een foto inslepen: de app leest de tekst"
+    }
   ]
 }

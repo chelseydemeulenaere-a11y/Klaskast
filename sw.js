@@ -1,7 +1,8 @@
-const CACHE = "klaskast-v3";
+const CACHE = "klaskast-v4";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest", "./privacy.html",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png",
+  "./screenshot-1.png", "./screenshot-2.png", "./screenshot-3.png",
   "./tess-worker.min.js", "./tess-core.wasm.js", "./nld-traineddata.bin"
 ];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
